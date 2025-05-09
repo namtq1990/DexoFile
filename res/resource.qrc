@@ -1,0 +1,6 @@
+<RCC>
+    <qresource prefix="/icons">
+        <file alias="wifi.png">icons/wifi.png</file>
+        <file alias="sound_on.png">icons/sound_on.png</file>
+    </qresource>
+</RCC>

@@ -1,0 +1,17 @@
+BasedOnStyle: Google
+IndentWidth: 4
+ColumnLimit: 120
+AllowShortLambdasOnASingleLine: false
+BreakBeforeBraces: Custom
+BraceWrapping:
+  AfterFunction: false
+  AfterClass: true
+  AfterControlStatement: false
+  AfterEnum: true
+  BeforeCatch: false
+  BeforeElse: false
+  IndentBraces: false
+AlignConsecutiveAssignments: true
+AlignConsecutiveDeclarations: true
+AlignTrailingComments: true
+SortIncludes: false
