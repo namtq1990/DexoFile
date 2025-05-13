@@ -13,12 +13,16 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 include_directories(util) # Add util directory for header searches
 include_directories(widget) # Add widget directory for header searches
+include_directories(component) # Add component directory
+include_directories(page) # Add page directory
 
 find_package(QT NAMES Qt6 Qt5 COMPONENTS Widgets REQUIRED)
 find_package(Qt${QT_VERSION_MAJOR} COMPONENTS Widgets REQUIRED)
 
 set(PROJECT_SOURCES
         main.cpp
+        application.cpp
+        application.h
         mainwindow.cpp
         mainwindow.h
         mainwindow.ui
@@ -34,6 +38,25 @@ set(PROJECT_SOURCES
         widget/menuwidget.h
         widget/menuwidget.cpp
         widget/menuwidget.ui
+        widget/basescreen.h
+        widget/basescreen.cpp
+        widget/baselist.h
+        widget/baselist.cpp
+        widget/concentriccircleswidget.h
+        widget/concentriccircleswidget.cpp
+        component/component.h
+        component/component.cpp
+        component/navigationcomponent.h
+        component/navigationcomponent.cpp
+        component/componentmanager.h
+        component/componentmanager.cpp
+        component/inputcomponent.h
+        component/inputcomponent.cpp
+        page/homepage.h
+        page/homepage.cpp
+        page/homepage.ui
+        page/settingscreen.h
+        page/settingscreen.cpp
         res/resource.qrc
 )
 

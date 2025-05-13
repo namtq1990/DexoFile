@@ -47,6 +47,10 @@ inline QDebug logE() {
     return createLogStream(QtCriticalMsg, "ERROR");
 }
 
+inline QDebug logW() {
+    return createLogStream(QtWarningMsg, "WARN");
+}
+
 } // namespace nucare
 
 #endif // NDT_UTIL_H

@@ -2,11 +2,15 @@
 #define MENUWIDGET_H
 
 #include <QWidget>
+#include "widget/basescreen.h" // Include full definition for BaseScreen and ViewAction
 
-// Forward declaration of the UI class
+// Forward declarations
 namespace Ui {
 class MenuWidget;
 }
+class NavigationComponent;
+class NcButton;
+// BaseScreen and ViewAction are now included
 
 class MenuWidget : public QWidget
 {
@@ -16,14 +20,30 @@ public:
     explicit MenuWidget(QWidget *parent = nullptr);
     ~MenuWidget();
 
-    // Example: If you need to access buttons to connect signals externally
-    // class NcButton* getTargetButton() const;
-    // class NcButton* getIdScanButton() const;
-    // class NcButton* getSettingsButton() const;
+    void setNavigationComponent(NavigationComponent* navComp);
 
+private slots:
+    void simulateButtonPress(NcButton* button);
+    void simulateButtonRelease(NcButton* button);
+    void onCurrentScreenChanged(BaseScreen *newScreen, BaseScreen *oldScreen);
+    void onCanNavigateBackChanged(bool canGoBack); // If one button is dedicated to "Back"
+
+    // Slots for NcButton clicks
+    void onLeftButtonClicked();
+    void onCenterButtonClicked();
+    void onRightButtonClicked();
+
+    // Slots for NcButton long clicks
+    void onLeftButtonLongClicked(long msec);
+    void onCenterButtonLongClicked(long msec);
+    void onRightButtonLongClicked(long msec);
 
 private:
     Ui::MenuWidget *ui;
+    NavigationComponent *m_navigationComponent;
+
+
+    void updateButtonWithAction(NcButton* button, const ViewAction& shortAction, const ViewAction& longAction);
 };
 
 #endif // MENUWIDGET_H

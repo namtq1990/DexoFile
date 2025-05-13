@@ -5,17 +5,53 @@
 #include <QFont>
 #include <QStyle>
 
-ThemeManager::ThemeManager(QObject *parent) : QObject(parent)
-{
-
+// Helper function to create the standard list header font
+namespace { // Anonymous namespace for helper
+    QFont createListHeaderFont() {
+        QFont font("Pretendard", 6);
+        font.setBold(true);
+        return font;
+    }
 }
 
+ThemeManager::ThemeManager(QObject *parent)
+    : QObject(parent)
+    , Component("ThemeManager") // Initialize Component base class
+    , m_listHeaderTextColor(Qt::black) // Default for light theme or un-themed
+    , m_listHeaderFont(createListHeaderFont()) // Initialize with helper
+{
+    // Further specific initializations if needed
+}
+
+// Getters
+QColor ThemeManager::listHeaderTextColor() const
+{
+    return m_listHeaderTextColor;
+}
+
+QFont ThemeManager::listHeaderFont() const
+{
+    return m_listHeaderFont;
+}
+
+// Setters
+void ThemeManager::setListHeaderTextColor(const QColor& color)
+{
+    m_listHeaderTextColor = color;
+}
+
+void ThemeManager::setListHeaderFont(const QFont& font)
+{
+    m_listHeaderFont = font;
+}
+
+// Instance method
 void ThemeManager::applyBaseSettings(QApplication *app)
 {
     if (!app)
         return;
 
-    QFont defaultFont("Pretendard", 9);
+    QFont defaultFont("Pretendard", 6);
     app->setFont(defaultFont);
 }
 
@@ -57,8 +93,13 @@ void ThemeManager::applyDarkTheme(QApplication *app)
 
 
     app->setPalette(darkPalette);
+
+    // Set instance properties for list headers for the dark theme
+    this->setListHeaderTextColor(QColor(200, 200, 200)); // Light gray
+    this->setListHeaderFont(createListHeaderFont());
 }
 
+// Instance method
 void ThemeManager::applyLightTheme(QApplication *app)
 {
     if (!app)
@@ -77,4 +118,8 @@ void ThemeManager::applyLightTheme(QApplication *app)
     // ... set other colors for light theme
     app->setPalette(lightPalette);
     */
+
+    // Set instance properties for list headers for the light theme
+    this->setListHeaderTextColor(QColor(0, 0, 128)); // Dark blue
+    this->setListHeaderFont(createListHeaderFont());
 }

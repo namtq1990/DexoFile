@@ -13,6 +13,15 @@
   <property name="windowTitle">
    <string>StatusBar</string>
   </property>
+  <property name="autoFillBackground">
+   <bool>true</bool>
+  </property>
+  <property name="styleSheet">
+   <string notr="true">StatusBarWidget {
+	background-color: #000016;
+}
+</string>
+  </property>
   <layout class="QHBoxLayout" name="horizontalLayout">
    <property name="spacing">
     <number>6</number>
@@ -95,11 +104,6 @@
    </item>
    <item>
     <widget class="QLabel" name="timeLabel">
-     <property name="font">
-      <font>
-       <pointsize>9</pointsize>
-      </font>
-     </property>
      <property name="text">
       <string>00:00 PM</string>
      </property>

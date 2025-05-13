@@ -6,6 +6,7 @@ StatusBarWidget::StatusBarWidget(QWidget *parent) :
     QWidget(parent),
     ui(new Ui::StatusBarWidget)
 {
+    setAttribute(Qt::WA_StyledBackground, true);
     ui->setupUi(this);
 
     m_timer = new QTimer(this);
