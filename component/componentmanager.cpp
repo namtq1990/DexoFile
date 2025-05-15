@@ -6,6 +6,8 @@
 #include <QStackedWidget>
 #include <QObject>
 
+using namespace navigation;
+
 // Using declaration for InputComponent from the nucare namespace
 // This allows using InputComponent without nucare:: prefix in this file.
 namespace nucare { class InputComponent; } // Forward declaration for the using statement below
@@ -29,11 +31,13 @@ ComponentManager::~ComponentManager()
     // QScopedPointers will automatically delete managed objects
 }
 
-void ComponentManager::initializeNavigationComponent(QStackedWidget* stackedWidget, QObject* parent)
+void ComponentManager::initializeNavigationComponent()
 {
     if (!m_navigationComponent) {
-        m_navigationComponent.reset(new NavigationComponent(stackedWidget, parent));
+        m_navigationComponent.reset(new NavigationComponent());
         logI() << "NavigationComponent initialized.";
+
+        navigation::toMainWindow(m_navigationComponent.get());
     } else {
         logE() << "NavigationComponent already initialized.";
     }

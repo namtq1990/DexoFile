@@ -8,7 +8,7 @@ set(CMAKE_AUTOUIC ON)
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 include_directories(util) # Add util directory for header searches
@@ -30,6 +30,14 @@ set(PROJECT_SOURCES
         thememanager.h
         util/util.h
         config.h
+        base/baseview.h
+        base/baseview.cpp
+        base/basescreen.h
+        base/basescreen.cpp
+        base/basewindow.h
+        base/basewindow.cpp
+        base/basedialog.h
+        base/basedialog.cpp
         widget/NcButton.h
         widget/NcButton.cpp
         widget/statusbarwidget.h
@@ -38,8 +46,6 @@ set(PROJECT_SOURCES
         widget/menuwidget.h
         widget/menuwidget.cpp
         widget/menuwidget.ui
-        widget/basescreen.h
-        widget/basescreen.cpp
         widget/baselist.h
         widget/baselist.cpp
         widget/concentriccircleswidget.h

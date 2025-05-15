@@ -49,6 +49,7 @@ void Application::initialize()
     }
 
     ComponentManager::instance().initializeInputComponent(this);
+    ComponentManager::instance().initializeNavigationComponent();
 }
 
 } // namespace nucare

@@ -18,4 +18,13 @@
 // You could also add build date/time if needed, e.g., using __DATE__ and __TIME__
 // #define APP_BUILD_TIMESTAMP __DATE__ " " __TIME__
 
+namespace tag {
+
+constexpr const char* WARNING_DLG = "Warning_Dlg";
+constexpr const char* SUCCESS_DLG = "SuccessDlg";
+constexpr const char* WINDOW_TAG  = "MainWindow";
+constexpr const char* HOME_TAG    = "HomeScreen";
+constexpr const char* SETTING_TAG = "SettingScreen";
+}  // namespace tag
+
 #endif // NDT_CONFIG_H

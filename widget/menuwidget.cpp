@@ -10,8 +10,7 @@
 
 MenuWidget::MenuWidget(QWidget *parent) :
     QWidget(parent),
-    ui(new Ui::MenuWidget),
-    m_navigationComponent(nullptr)
+    ui(new Ui::MenuWidget)
 {
     ui->setupUi(this);
 
@@ -38,169 +37,171 @@ MenuWidget::MenuWidget(QWidget *parent) :
     } else {
         nucare::logE() << "MenuWidget: InputComponent is null, cannot connect input signals.";
     }
+
+    // Register as a global navigation listener
+    navigation::NavigationComponent::registerGlobalListener(this);
 }
 
 MenuWidget::~MenuWidget()
 {
+    // Unregister as a global navigation listener
+    navigation::NavigationComponent::unregisterGlobalListener(this);
     delete ui;
 }
 
-void MenuWidget::setNavigationComponent(NavigationComponent* navComp)
+// Slots for global navigation events
+void MenuWidget::onGlobalViewPushed(navigation::NavigationComponent* source, BaseView* newView)
 {
-    if (m_navigationComponent) {
-        // Disconnect old signals
-        disconnect(m_navigationComponent, &NavigationComponent::currentScreenChanged, this, &MenuWidget::onCurrentScreenChanged);
-        disconnect(m_navigationComponent, &NavigationComponent::canNavigateBackChanged, this, &MenuWidget::onCanNavigateBackChanged);
-    }
-
-    m_navigationComponent = navComp;
-
-    if (m_navigationComponent) {
-        connect(m_navigationComponent, &NavigationComponent::currentScreenChanged, this, &MenuWidget::onCurrentScreenChanged);
-        connect(m_navigationComponent, &NavigationComponent::canNavigateBackChanged, this, &MenuWidget::onCanNavigateBackChanged);
-
-        // Initial state update
-        onCurrentScreenChanged(m_navigationComponent->currentScreen(), nullptr);
-        onCanNavigateBackChanged(m_navigationComponent->canNavigateBack());
-    } else {
-        // No navigation component, perhaps clear/disable buttons
-        onCurrentScreenChanged(nullptr, nullptr);
-        onCanNavigateBackChanged(false);
-    }
+    Q_UNUSED(source);
+    Q_UNUSED(newView);
+    updateMenu();
 }
 
-void MenuWidget::onCurrentScreenChanged(BaseScreen *newScreen, BaseScreen *oldScreen)
+void MenuWidget::onGlobalViewPopped(navigation::NavigationComponent* source, BaseView* oldView)
 {
-    Q_UNUSED(oldScreen);
-
-    ViewAction leftAction, centerAction, rightAction;
-    ViewAction longLeftAction, longCenterAction, longRightAction;
-
-    if (newScreen) {
-        leftAction = newScreen->leftViewAction;
-        centerAction = newScreen->centerViewAction;
-        rightAction = newScreen->rightViewAction;
-        longLeftAction = newScreen->longClickLeftViewAction;
-        longCenterAction = newScreen->longClickCenterViewAction;
-        longRightAction = newScreen->longClickRightViewAction;
-    }
-    // If newScreen is null, default ViewAction() will be used for all.
-
-    updateButtonWithAction(ui->btnLeft, leftAction, longLeftAction);
-    updateButtonWithAction(ui->btnCenter, centerAction, longCenterAction);
-    updateButtonWithAction(ui->btnRight, rightAction, longRightAction);
-
-    // Special handling for the "Back" button (ui->btnLeft)
-    // Its enabled state depends on its action's validity AND canNavigateBack.
-    // This is now handled within updateButtonWithAction.
-    // We might need to call onCanNavigateBackChanged explicitly if newScreen is null
-    // or if the screen changes, to ensure back button state is correct.
-    if (m_navigationComponent) {
-        onCanNavigateBackChanged(m_navigationComponent->canNavigateBack());
-    } else {
-        onCanNavigateBackChanged(false);
-    }
+    Q_UNUSED(source);
+    Q_UNUSED(oldView);
+    updateMenu();
 }
 
-void MenuWidget::onCanNavigateBackChanged(bool canGoBack)
+navigation::NavigationComponent *MenuWidget::navigation()
 {
-    // This function now primarily updates the back button's enabled state
-    // based on canGoBack and the current left action's validity.
-    BaseScreen* currentScreen = m_navigationComponent ? m_navigationComponent->currentScreen() : nullptr;
-    ViewAction leftAction = currentScreen ? currentScreen->leftViewAction : ViewAction();
-    
-    ui->btnLeft->setEnabled(leftAction.isValid() && canGoBack);
+    return ComponentManager::instance().navigationComponent();
+}
+
+void MenuWidget::updateMenu()
+{
+    QString leftTxt, longLeftTxt;
+    QString centerTxt, longCenterTxt;
+    QString rightTxt, longRightTxt;
+
+    const char* icLeft = nullptr;
+    const char* icCenter = nullptr;
+    const char* icRight = nullptr;
+
+    if (auto leftAction = getActionFor(LEFT)) {
+        leftTxt = leftAction->name;
+        icLeft = leftAction->icon ? leftAction->icon : nullptr;
+    }
+    if (auto centerAction = getActionFor(CENTER)) {
+        centerTxt = centerAction->name;
+        icCenter = centerAction->icon ? centerAction->icon : nullptr;
+    }
+    if (auto rightAction = getActionFor(RIGHT)) {
+        rightTxt = rightAction->name;
+        icRight = rightAction->icon ? rightAction->icon : nullptr;
+    }
+    if (auto longLeftAction = getActionFor(LONG_LEFT)) {
+        longLeftTxt = longLeftAction->name;
+        icLeft = longLeftAction->icon ? longLeftAction->icon : icLeft;
+    }
+    if (auto longCenterAction = getActionFor(LONG_CENTER)) {
+        longCenterTxt = longCenterAction->name;
+        icCenter = longCenterAction->icon ? longCenterAction->icon : icCenter;
+    }
+    if (auto longRightAction = getActionFor(LONG_RIGHT)) {
+        longRightTxt = longRightAction->name;
+        icRight = longRightAction->icon ? longRightAction->icon : icRight;
+    }
+
+    if (!longLeftTxt.isEmpty()) {
+        leftTxt += "/" + longLeftTxt;
+    }
+    if (!longCenterTxt.isEmpty()) {
+        centerTxt += "/" + longCenterTxt;
+    }
+    if (!longRightTxt.isEmpty()) {
+        rightTxt += "/" + longRightTxt;
+    }
+
+    if (!icLeft) {
+        ui->btnLeft->setText(leftTxt);
+        ui->btnLeft->setIcon(QIcon());
+    } else {
+        ui->btnLeft->setText("");
+        ui->btnLeft->setIcon(QIcon(QPixmap(icLeft)));
+    }
+
+    if (!icCenter) {
+        ui->btnCenter->setText(centerTxt);
+        ui->btnCenter->setIcon(QIcon());
+    } else {
+        ui->btnCenter->setText("");
+        ui->btnCenter->setIcon(QIcon(QPixmap(icCenter)));
+    }
+
+    if (!icRight) {
+        ui->btnRight->setText(rightTxt);
+        ui->btnRight->setIcon(QIcon());
+    } else {
+        ui->btnRight->setText("");
+        ui->btnRight->setIcon(QIcon(QPixmap(icRight)));
+    }
 }
 
 void MenuWidget::onLeftButtonClicked()
 {
-    if (!m_navigationComponent) return;
-    BaseScreen* screen = m_navigationComponent->currentScreen();
-    if (screen && screen->leftViewAction.isValid() && screen->leftViewAction.action) {
-        screen->leftViewAction.action();
+    if (auto nav = navigation()) {
+        if (onMenuSelected()) return;
+
+        if (auto action = getActionFor(ActionType::LEFT)) {
+            action->action();
+        }
     }
 }
 
 void MenuWidget::onCenterButtonClicked()
 {
-    if (!m_navigationComponent) return;
-    BaseScreen* screen = m_navigationComponent->currentScreen();
-    if (screen && screen->centerViewAction.isValid() && screen->centerViewAction.action) {
-        screen->centerViewAction.action();
+    if (auto nav = navigation()) {
+        if (onMenuSelected()) return;
+
+        if (auto action = getActionFor(ActionType::CENTER)) {
+            action->action();
+        }
     }
 }
 
 void MenuWidget::onRightButtonClicked()
 {
-    if (!m_navigationComponent) return;
-    BaseScreen* screen = m_navigationComponent->currentScreen();
-    if (screen && screen->rightViewAction.isValid() && screen->rightViewAction.action) {
-        screen->rightViewAction.action();
+    if (auto nav = navigation()) {
+        if (onMenuSelected()) return;
+
+        if (auto action = getActionFor(ActionType::RIGHT)) {
+            action->action();
+        }
     }
 }
 
 void MenuWidget::onLeftButtonLongClicked(long)
 {
-    if (!m_navigationComponent) return;
-    BaseScreen* screen = m_navigationComponent->currentScreen();
-    if (screen && screen->longClickLeftViewAction.isValid() && screen->longClickLeftViewAction.action) {
-        screen->longClickLeftViewAction.action();
+    if (auto nav = navigation()) {
+        if (onMenuSelected()) return;
+
+        if (auto action = getActionFor(ActionType::LONG_LEFT)) {
+            action->action();
+        }
     }
 }
 
 void MenuWidget::onCenterButtonLongClicked(long)
 {
-    if (!m_navigationComponent) return;
-    BaseScreen* screen = m_navigationComponent->currentScreen();
-    if (screen && screen->longClickCenterViewAction.isValid() && screen->longClickCenterViewAction.action) {
-        screen->longClickCenterViewAction.action();
+    if (auto nav = navigation()) {
+        if (onMenuSelected()) return;
+
+        if (auto action = getActionFor(ActionType::LONG_CENTER)) {
+            action->action();
+        }
     }
 }
 
 void MenuWidget::onRightButtonLongClicked(long)
 {
-    if (!m_navigationComponent) return;
-    BaseScreen* screen = m_navigationComponent->currentScreen();
-    if (screen && screen->longClickRightViewAction.isValid() && screen->longClickRightViewAction.action) {
-        screen->longClickRightViewAction.action();
-    }
-}
+    if (auto nav = navigation()) {
+        if (onMenuSelected()) return;
 
-void MenuWidget::updateButtonWithAction(NcButton* button, const ViewAction& shortAction, const ViewAction& longAction)
-{
-    if (!button) return;
-
-    bool hasShortIcon = shortAction.iconPath && QString(shortAction.iconPath).startsWith(":/");
-    bool hasLongIcon = longAction.iconPath && QString(longAction.iconPath).startsWith(":/");
-    bool hasAnyValidIcon = hasShortIcon || hasLongIcon;
-
-    if (hasAnyValidIcon) {
-        button->setText(""); // Hide text if icon is present
-        if (hasShortIcon) {
-            button->setIcon(QIcon(shortAction.iconPath));
-        } else { // Must be hasLongIcon
-            button->setIcon(QIcon(longAction.iconPath));
+        if (auto action = getActionFor(ActionType::LONG_RIGHT)) {
+            action->action();
         }
-    } else {
-        // No valid icon, set text based on short and long action names
-        QString buttonText = shortAction.name;
-        if (!longAction.name.isEmpty()) {
-            buttonText += " / " + longAction.name;
-        }
-        button->setText(buttonText);
-        button->setIcon(QIcon()); // Clear icon
-    }
-
-    // Set Enabled state (primarily based on shortAction)
-    // A button is generally considered "active" if its primary (short click) action is valid.
-    // Long click is often a secondary/alternative action.
-    if (button == ui->btnLeft) {
-        // For ui->btnLeft (Back), enabled only if shortAction is valid AND can navigate back.
-        bool canGoBack = m_navigationComponent ? m_navigationComponent->canNavigateBack() : false;
-        button->setEnabled(shortAction.isValid() && canGoBack);
-    } else {
-        // For other buttons, enabled state is based on shortAction's validity.
-        button->setEnabled(shortAction.isValid());
     }
 }
 
@@ -218,4 +219,54 @@ void MenuWidget::simulateButtonRelease(NcButton* button)
     QPoint center = button->rect().center();
     QMouseEvent releaseEvent(QEvent::MouseButtonRelease, center, button->mapToGlobal(center), Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
     QCoreApplication::sendEvent(button, &releaseEvent);
+}
+
+std::shared_ptr<ViewAction> MenuWidget::getActionFor(BaseView* view, ActionType type) {
+    switch (type) {
+    case LEFT:
+        return view->getLeftAction();
+    case CENTER:
+        return view->getCenterAction();
+    case RIGHT:
+        return view->getRightAction();
+    case LONG_LEFT:
+        return view->getLongLeftAction();
+    case LONG_CENTER:
+        return view->getLongCenterAction();
+    case LONG_RIGHT:
+        return view->getLongRightAction();
+    default:
+        return nullptr;
+    }
+}
+
+std::shared_ptr<ViewAction> MenuWidget::getActionFor(ActionType type) {
+    auto nav = navigation();
+    auto curScreen = nav->curScreen(false);
+    if (curScreen == nullptr) {
+        return nullptr;
+    }
+
+    while (true) {
+        nav = curScreen->getChildNavigation();
+        if (!nav) {
+            break;
+        }
+
+        auto exCurScreen = nav->curScreen(false);
+        if (!exCurScreen)
+            break;
+
+        auto action = getActionFor(exCurScreen, type);
+        if (!action) break;
+
+        curScreen = exCurScreen;
+    }
+
+    return getActionFor(curScreen, type);
+}
+
+bool MenuWidget::onMenuSelected()
+{
+    return false;
 }

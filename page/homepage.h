@@ -1,7 +1,7 @@
 #ifndef HOMEPAGE_H
 #define HOMEPAGE_H
 
-#include "widget/basescreen.h" // Inherit from BaseScreen
+#include "base/basescreen.h"
 
 // Forward declaration for the UI class
 namespace Ui {
@@ -22,9 +22,7 @@ public:
     explicit HomePage(QWidget *parent = nullptr); // navComp parameter removed
     ~HomePage() override;
 
-    // BaseScreen interface
-    void onScreenShown() override;
-    void onScreenHidden() override;
+    void reloadLocal() override;
 
 private:
     Ui::HomePage *ui;

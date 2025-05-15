@@ -2,15 +2,14 @@
 #define MENUWIDGET_H
 
 #include <QWidget>
-#include "widget/basescreen.h" // Include full definition for BaseScreen and ViewAction
+#include "navigationcomponent.h"
 
 // Forward declarations
 namespace Ui {
 class MenuWidget;
 }
-class NavigationComponent;
 class NcButton;
-// BaseScreen and ViewAction are now included
+class ViewAction;
 
 class MenuWidget : public QWidget
 {
@@ -20,13 +19,33 @@ public:
     explicit MenuWidget(QWidget *parent = nullptr);
     ~MenuWidget();
 
-    void setNavigationComponent(NavigationComponent* navComp);
+    navigation::NavigationComponent* navigation();
+    void updateMenu();
+
+    enum ActionType {
+        LEFT,
+        CENTER,
+        RIGHT,
+        LONG_LEFT,
+        LONG_CENTER,
+        LONG_RIGHT
+    };
+
+    std::shared_ptr<ViewAction> getActionFor(BaseView* view, ActionType type);
+    std::shared_ptr<ViewAction> getActionFor(ActionType type);
+
+    /**
+     * @brief onMenuSelected    Handle when menu is selected.
+     * @return  Return true then block custom action. Otherwise open view action
+     */
+    bool onMenuSelected();
 
 private slots:
-    void simulateButtonPress(NcButton* button);
-    void simulateButtonRelease(NcButton* button);
-    void onCurrentScreenChanged(BaseScreen *newScreen, BaseScreen *oldScreen);
-    void onCanNavigateBackChanged(bool canGoBack); // If one button is dedicated to "Back"
+void onGlobalViewPushed(navigation::NavigationComponent* source, BaseView* newView);
+void onGlobalViewPopped(navigation::NavigationComponent* source, BaseView* oldView);
+
+void simulateButtonPress(NcButton* button);
+void simulateButtonRelease(NcButton* button);
 
     // Slots for NcButton clicks
     void onLeftButtonClicked();
@@ -40,8 +59,6 @@ private slots:
 
 private:
     Ui::MenuWidget *ui;
-    NavigationComponent *m_navigationComponent;
-
 
     void updateButtonWithAction(NcButton* button, const ViewAction& shortAction, const ViewAction& longAction);
 };

@@ -1,7 +1,7 @@
 #ifndef SETTINGSCREEN_H
 #define SETTINGSCREEN_H
 
-#include "widget/basescreen.h" // Inherit from BaseScreen
+#include "base/basescreen.h"
 
 // Forward declarations
 class BaseListWidget;
@@ -15,7 +15,9 @@ public:
     explicit SettingScreen(QWidget *parent = nullptr);
     ~SettingScreen();
 
-private:
+    void reloadLocal() override {};
+
+   private:
     // If not using a .ui file for the layout of SettingScreen itself:
     BaseListWidget *m_listWidget; 
 

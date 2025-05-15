@@ -1,19 +1,23 @@
 #ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 
-#include <QMainWindow>
+#include <base/basewindow.h>
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
 QT_END_NAMESPACE
 
-class MainWindow : public QMainWindow
+class MainWindow : public BaseWindow
 {
     Q_OBJECT
 
 public:
-    MainWindow(QWidget *parent = nullptr);
+    MainWindow(const QString& tag = "", QWidget *parent = nullptr);
     ~MainWindow();
+
+    void reloadLocal() override;
+
+    void onCreate(navigation::NavigationArgs* args) override;
 
 private:
     Ui::MainWindow *ui;

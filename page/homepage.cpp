@@ -1,17 +1,15 @@
 #include "page/homepage.h"
-#include "ui_homepage.h" // Generated UI header
-#include "component/componentmanager.h"
-#include "component/navigationcomponent.h"
-#include "util/util.h"
+#include "ui_homepage.h"  // Generated UI header
+using namespace navigation;
 
-// Placeholder forward declarations for pages to be created
-// class IdScanPage;
-// class SettingsPage;
+void navigation::toHome(NavigationComponent* navController, NavigationEntry* entry, const QString& tag) {
+    auto pWidget = dynamic_cast<QWidget*>(entry->host);
+    entry->type  = TAB_IN_WINDOW;
+    entry->view  = new HomePage(pWidget);
+    navController->enter(entry);
+}
 
-HomePage::HomePage(QWidget *parent)
-    : BaseScreen(parent),
-      ui(new Ui::HomePage)
-{
+HomePage::HomePage(QWidget* parent) : BaseScreen(tag::HOME_TAG, parent), ui(new Ui::HomePage) {
     ui->setupUi(this);
 
     // Define ViewActions for HomePage
@@ -27,39 +25,33 @@ HomePage::HomePage(QWidget *parent)
     // Or, set an alternative action if desired. For this example, let's leave it default (invalid).
     // You can access UI elements via ui->... e.g. ui->titleLabel->setText("New Title");
 
-    setCenterViewAction("Scan ID", [this]() {
-        nucare::logD() << "Scan ID action triggered from HomePage";
-        // TODO: if(m_navComponent) m_navComponent->navigateTo(new IdScanPage(m_navComponent, this));
-        return true;
-    }, nullptr);
-
-    setRightViewAction("Events", [this]() {
-        nucare::logD() << "Event action triggered";
-        return true;
-    }, nullptr);
-
-    setLongClickRightViewAction(
-        "Settings",
+    setCenterAction(new ViewAction(
+        "Scan ID",
         [this]() {
-            ComponentManager::instance().navigationComponent()->navigateSettingPage(parentWidget());
+            nucare::logD() << "Scan ID action triggered from HomePage";
+            // TODO: if(m_navComponent) m_navComponent->navigateTo(new IdScanPage(m_navComponent, this));
             return true;
         },
-        nullptr);
+        nullptr));
+
+    setRightAction(new ViewAction(
+        "Events",
+        [this]() {
+            nucare::logD() << "Event action triggered";
+            return true;
+        },
+        nullptr));
+
+    setRightAction(new ViewAction(
+        "Settings",
+        [this]() {
+            navigation::toSetting(getNavigation(), new navigation::NavigationEntry(navigation::CHILD_IN_WINDOW, nullptr,
+                                                                                   nullptr, this->parent()));
+            return true;
+        },
+        nullptr));
 }
 
-HomePage::~HomePage()
-{
-    delete ui;
-}
+HomePage::~HomePage() { delete ui; }
 
-void HomePage::onScreenShown()
-{
-    BaseScreen::onScreenShown(); // Call base implementation (emits signal)
-    nucare::logD() << "HomePage shown";
-}
-
-void HomePage::onScreenHidden()
-{
-    BaseScreen::onScreenHidden(); // Call base implementation (emits signal)
-    nucare::logD() << "HomePage hidden";
-}
+void HomePage::reloadLocal() { ui->retranslateUi(this); }

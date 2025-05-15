@@ -6,11 +6,11 @@
 #include <QScopedPointer> // For managing owned non-QObject components
 
 // Forward declarations
-class NavigationComponent;
 class ThemeManager;
-namespace nucare { class InputComponent; } // Forward declare nucare::InputComponent
-class QStackedWidget; // Needed for NavigationComponent initialization
-class QObject;        // For parent parameter
+namespace navigation { class NavigationComponent; }
+namespace nucare { class InputComponent; }
+class QStackedWidget;
+class QObject;
 
 class ComponentManager : virtual public Component
 {
@@ -20,11 +20,11 @@ public:
     ~ComponentManager();
 
     // Initialization methods - must be called after QApplication instance exists if components need it
-    void initializeNavigationComponent(QStackedWidget* stackedWidget, QObject* parent = nullptr);
+    void initializeNavigationComponent();
     void initializeThemeManager(QObject* parent = nullptr); // Assuming ThemeManager might need a parent
     void initializeInputComponent(QObject* parent = nullptr); // For InputComponent
 
-    NavigationComponent* navigationComponent() const;
+    navigation::NavigationComponent* navigationComponent() const;
     ThemeManager* themeManager() const;
     nucare::InputComponent* inputComponent() const; // Getter for nucare::InputComponent
 
@@ -35,7 +35,7 @@ public:
 private:
     ComponentManager(); // Private constructor for singleton
 
-    QScopedPointer<NavigationComponent> m_navigationComponent;
+    QScopedPointer<navigation::NavigationComponent> m_navigationComponent;
     QScopedPointer<ThemeManager> m_themeManager;
     QScopedPointer<nucare::InputComponent> m_inputComponent; // Member for nucare::InputComponent
     // If ThemeManager becomes a QObject and needs QObject parenting for lifetime,

@@ -9,7 +9,5 @@ int main(int argc, char *argv[])
     nucare::Application app(argc, argv);
     app.initialize(); // Initialize application settings
 
-    MainWindow w;
-    w.show();
     return app.exec();
 }

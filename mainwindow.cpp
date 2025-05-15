@@ -4,30 +4,34 @@
 #include "component/navigationcomponent.h"
 #include "widget/menuwidget.h"
 
-MainWindow::MainWindow(QWidget *parent)
-    : QMainWindow(parent)
+using namespace navigation;
+
+void navigation::toMainWindow(NavigationComponent* navController, const QString& tag) {
+    auto window = new MainWindow(tag);
+    auto childNavigation = new NavigationComponent(navController);
+    auto entry = new navigation::NavigationEntry(navigation::WINDOW, window, childNavigation);
+
+    navController->enter(entry);
+}
+
+MainWindow::MainWindow(const QString &tag, QWidget *parent)
+    : BaseWindow(tag, parent)
     , ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
-
-    // Initialize components through ComponentManager
-    // ThemeManager is now initialized in Application::initialize()
-    ComponentManager::instance().initializeNavigationComponent(ui->mainStackedWidget, this);
-
-    NavigationComponent* navComp = ComponentManager::instance().navigationComponent();
-
-    // Connect the MenuWidget (from ui) to the NavigationComponent
-
-    if (ui->menuWidget && navComp) {
-        ui->menuWidget->setNavigationComponent(navComp);
-        navComp->navigateHomePage(this);
-    } else {
-        nucare::logW() << "MainWindow: menuWidget or navigationComponent (from ComponentManager) is null, cannot connect.";
-    }
 }
 
 MainWindow::~MainWindow()
 {
     // m_navigationComponent is no longer owned by MainWindow
     delete ui;
+}
+
+void MainWindow::reloadLocal() {
+    ui->retranslateUi(this);
+}
+
+void MainWindow::onCreate(navigation::NavigationArgs *args) {
+    BaseWindow::onCreate(args);
+    navigation::toHome(getChildNavigation(), new NavigationEntry(CHILD_IN_WINDOW, nullptr, nullptr, ui->mainStackedWidget));
 }
