@@ -1,6 +1,7 @@
 #include "componentmanager.h"
 #include "navigationcomponent.h"
 #include "component/inputcomponent.h" // Include InputComponent (full path for clarity)
+#include "controller/platform_controller.h"
 #include "../thememanager.h"
 #include <QApplication>
 #include <QStackedWidget>
@@ -21,7 +22,7 @@ ComponentManager& ComponentManager::instance()
 }
 
 ComponentManager::ComponentManager()
-    : Component("ComponentManager") // Initialize base Component with a tag
+    : Component("ComponentManager")
 {
     // Constructor is private
 }
@@ -74,6 +75,20 @@ void ComponentManager::initializeInputComponent(QObject* parent)
     }
 }
 
+void ComponentManager::initializeWiFiService(QObject* parent)
+{
+    if (!m_wifiService) {
+        m_wifiService.reset(new WiFiService(parent));
+        if (m_wifiService) {
+            logI() << "WiFiService initialized.";
+        } else {
+            logE() << "WiFiService allocation failed.";
+        }
+    } else {
+        logE() << "WiFiService already initialized.";
+    }
+}
+
 NavigationComponent* ComponentManager::navigationComponent() const
 {
     if (!m_navigationComponent) {
@@ -98,4 +113,30 @@ InputComponent* ComponentManager::inputComponent() const
         logE() << "InputComponent accessed before initialization!";
     }
     return m_inputComponent.data();
+}
+
+WiFiService* ComponentManager::wifiService() const
+{
+    if (!m_wifiService) {
+        logE() << "WiFiService accessed before initialization!";
+    }
+    return m_wifiService.data();
+}
+
+PlatformController* ComponentManager::platformController() const
+{
+    if (!m_platformController) {
+        logE() << "PlatformController accessed before initialization!";
+    }
+    return m_platformController.data();
+}
+
+void ComponentManager::initializePlatformController(QObject* parent)
+{
+     if (!m_platformController) {
+         m_platformController.reset(new PlatformController(parent));
+         logI() << "PlatformController initialized.";
+     } else {
+         logE() << "PlatformController already initialized.";
+     }
 }

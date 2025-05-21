@@ -3,6 +3,49 @@
 
 #include <QDebug>
 #include <QString>
+#include <QFuture>
+#include <QFutureWatcher>
+#include <functional>
+
+namespace nucare {
+
+template<typename T>
+void handleFuture(QFuture<T> future, std::function<void(T)> successHandler, QObject* host = nullptr,
+                 std::function<void(const QString&)> errorHandler = nullptr)
+{
+    auto* watcher = new QFutureWatcher<T>(host);
+    QObject::connect(watcher, &QFutureWatcher<T>::finished, [=]() {
+        try {
+            successHandler(future.result());
+        } catch (const std::exception& e) {
+            if (errorHandler) {
+                errorHandler(e.what());
+            }
+        }
+        watcher->deleteLater();
+    });
+    watcher->setFuture(future);
+}
+
+template<typename T, typename R>
+QFuture<R> chainFuture(QFuture<T> future, std::function<R(T)> transform, QObject* host = nullptr)
+{
+    QFutureInterface<R> promise;
+    auto* watcher = new QFutureWatcher<T>(host);
+    QObject::connect(watcher, &QFutureWatcher<T>::finished, [=]() mutable {
+        try {
+            promise.reportResult(transform(future.result()));
+        } catch (const std::exception& e) {
+            promise.reportException(QException());
+        }
+        promise.reportFinished();
+        watcher->deleteLater();
+    });
+    watcher->setFuture(future);
+    return promise.future();
+}
+
+}
 #include <QDateTime>
 #include <QThread>
 #include <QTextStream>

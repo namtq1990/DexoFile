@@ -1,50 +1,45 @@
-#ifndef BASELISTWIDGET_H
-#define BASELISTWIDGET_H
+#ifndef BASELIST_H
+#define BASELIST_H
 
-#include <QListWidget>
-#include <vector>   // For std::vector
-#include <utility>  // For std::pair
+#include <QTableView>
+#include <memory>
+#include <functional>
 
-class BaseListWidget : public QListWidget
+class BaseList : public QTableView
 {
     Q_OBJECT
-
 public:
-    explicit BaseListWidget(QWidget *parent = nullptr);
+    typedef std::function<void(const QModelIndex&)> OnClickListener;
 
-    // Custom roles for item data
-    enum ItemDataRole {
-        ItemTypeRole = Qt::UserRole + 1, // To store whether item is Header or Selectable
-        UserDataRole = Qt::UserRole + 2  // For arbitrary user data on selectable items
-    };
+    BaseList(QWidget* parent = NULL);
 
-    // Enum to distinguish item types
-    enum ListItemType {
-        SelectableItem,
-        HeaderItem
-    };
+    void setModel(QAbstractItemModel *model) override;
+    void setSelectionModel(QItemSelectionModel *selectionModel) override;
 
-    // Public API for navigation and activation
-    void selectNextSelectableItem();
-    void selectPreviousSelectableItem();
-    QListWidgetItem* activateCurrentItem(); // Returns the item if activation is valid
+    void setAutoSelect(bool isAuto);
 
-    // Methods to populate the list
-    void populateItems(const std::vector<std::pair<QString, ListItemType>>& itemsData);
-    void addItemWithType(const QString& text, ListItemType itemType, const QVariant& userData = QVariant());
-    void addHeaderItem(const QString& text);
-    void addSelectableItem(const QString& text, const QVariant& userData = QVariant());
+    void moveUp();
+    void moveDown();
+    void performClick();
+    void setClickListener(OnClickListener&& listener);
+    void updateHeaderVisibility(int value);
+    /*
+     *  Return current selection, if none, return -1
+     * */
+    int getSelectedIndex();
 
-    // Override to handle selection changes and apply custom styling if needed
-    // void currentItemChanged(QListWidgetItem *current, QListWidgetItem *previous) override;
+    // Return next index on the list of this item, if index reach end, restart to start position
+    int nextIndex(const int& index) const;
+    /*
+     *  Return Pre index on the list of this index, if index reach start, return it to end of list
+     *  */
+    int previousIndex(const int& index) const;
 
 private:
-    QListWidgetItem* findSelectableItem(int startIndex, int direction, bool wrapAround) const;
-    bool isItemSelectable(const QListWidgetItem* item) const;
-    
-    // Helper to get the first or last selectable item
-    QListWidgetItem* getFirstSelectableItem() const;
-    QListWidgetItem* getLastSelectableItem() const;
+    OnClickListener mListener = nullptr;
+    int mCurSelection = -1;
+    bool mAutoSelect = false;
+
 };
 
-#endif // BASELISTWIDGET_H
+#endif // BASELIST_H

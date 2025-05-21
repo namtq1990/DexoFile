@@ -2,9 +2,13 @@
 #define SETTINGSCREEN_H
 
 #include "base/basescreen.h"
+#include "model/settingmodel.h"
+
+#include <memory>
+#include <vector>
 
 // Forward declarations
-class BaseListWidget;
+class BaseList;
 namespace Ui { class SettingScreen; } // If using a .ui file for layout
 
 class SettingScreen : public BaseScreen
@@ -17,12 +21,13 @@ public:
 
     void reloadLocal() override {};
 
-   private:
+private:
     // If not using a .ui file for the layout of SettingScreen itself:
-    BaseListWidget *m_listWidget; 
+    BaseList *m_listWidget;
+    SettingModel* m_settingModel;
 
     // If using a .ui file that contains the BaseListWidget:
-    // Ui::SettingScreen *ui; 
+    // Ui::SettingScreen *ui;
     // And m_listWidget would be ui->yourBaseListWidgetName
 
     void setupListItems();

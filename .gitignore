@@ -71,6 +71,7 @@ Thumbs.db
 *.dll
 *.exe
 
+CMakeLists.txt.user
 build/
 .vscode/
 project_context.*

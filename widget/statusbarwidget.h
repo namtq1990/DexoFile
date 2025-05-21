@@ -20,6 +20,7 @@ public:
 
 private slots:
     void updateTime();
+    void updateWifiStatus();
 
 private:
     Ui::StatusBarWidget *ui;

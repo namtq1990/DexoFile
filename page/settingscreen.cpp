@@ -3,9 +3,13 @@
 #include "util/util.h"                      // For nucare::logI
 #include "component/componentmanager.h"     // For ComponentManager
 #include "component/navigationcomponent.h"  // For NavigationComponent
+#include "model/settingmodel.h"
+#include "widget/settingitemdelegate.h"
+#include "model/basesettingitem.h"
 #include <QVBoxLayout>
-#include <QListWidgetItem>
-#include "settingscreen.h"
+#include <QList>
+#include <QStandardItemModel>
+using namespace std;
 
 void navigation::toSetting(navigation::NavigationComponent* navController, navigation::NavigationEntry* entry,
                            //                   SettingArgs* args,
@@ -16,13 +20,15 @@ void navigation::toSetting(navigation::NavigationComponent* navController, navig
     navController->enter(entry);
 }
 
-SettingScreen::SettingScreen(QWidget* parent) : BaseScreen(tag::SETTING_TAG, parent), m_listWidget(nullptr) {
-    m_listWidget = new BaseListWidget(this);
+SettingScreen::SettingScreen(QWidget* parent) : BaseScreen(tag::SETTING_TAG, parent), m_listWidget(nullptr), m_settingModel(new SettingModel(this)) {
+    m_listWidget = new BaseList(this);
+    m_listWidget->setModel(m_settingModel);
 
     QVBoxLayout* mainLayout = new QVBoxLayout(this);
     mainLayout->addWidget(m_listWidget);
     mainLayout->setContentsMargins(0, 0, 0, 0);  // Use full space
     setLayout(mainLayout);
+    m_listWidget->setItemDelegate(new SettingItemDelegate(this));
 
     setupListItems();
     setupViewActions();
@@ -41,11 +47,31 @@ SettingScreen::~SettingScreen() {
 void SettingScreen::setupListItems() {
     if (!m_listWidget) return;
 
-    m_listWidget->addHeaderItem("SETTING");
-    m_listWidget->addSelectableItem("Sound");
-    m_listWidget->addSelectableItem("WiFi");
-    // Potentially select the first selectable item
-    // m_listWidget->selectNextSelectableItem(); // BaseListWidget constructor already does this.
+    m_listWidget->setClickListener([this](auto index) {
+        auto item = m_settingModel->rawData(index.row());
+        item->onClicked();
+    });
+
+    auto soundItem = new InfoSettingItem(this);
+    soundItem->setName("Sound")->setIcon(":/icons/sound_on.png");
+    connect(soundItem, &BaseSettingItem::clicked, this, &SettingScreen::handleSoundSetting);
+
+    auto wifiItem = new InfoSettingItem(this);
+    wifiItem->setName("WiFi")->setIcon(":/icons/wifi.png");
+    connect(wifiItem, &BaseSettingItem::clicked, this, &SettingScreen::handleWifiSetting);
+
+    auto backgroundItem = new InfoSettingItem(this);
+    backgroundItem->setName("Measure Background");
+
+    auto settings = std::shared_ptr<QVector<BaseSettingItem*>>(new QVector<BaseSettingItem*>{
+        (new HeaderSettingItem(this))->setName("Setting"),
+        (new SubSettingItem(this))->setSettings(QVector<BaseSettingItem*>({
+            backgroundItem
+        })),
+        soundItem,
+        wifiItem,
+    });
+    m_settingModel->setData(settings);
 }
 
 void SettingScreen::setupViewActions() {
@@ -55,23 +81,14 @@ void SettingScreen::setupViewActions() {
 
     setCenterAction(new ViewAction("OK", [this]() -> bool {
         if (m_listWidget) {
-            QListWidgetItem* activatedItem = m_listWidget->activateCurrentItem();
-            if (activatedItem) {
-                nucare::logI() << "SettingScreen: Activated item -" << activatedItem->text();
-                if (activatedItem->text() == "Sound") {
-                    handleSoundSetting();
-                } else if (activatedItem->text() == "WiFi") {
-                    handleWifiSetting();
-                }
-                return true;
-            }
+            m_listWidget->performClick();
         }
         return false;
     }));
 
-    setRightAction(new ViewAction("Right", [this]() {
+    setRightAction(new ViewAction("Down", [this]() {
         if (m_listWidget) {
-            m_listWidget->selectNextSelectableItem();
+            m_listWidget->moveDown();
             return true;
         }
         return false;
@@ -79,7 +96,7 @@ void SettingScreen::setupViewActions() {
 
     setLongRightAction(new ViewAction("Up", [this]() -> bool {
         if (m_listWidget) {
-            m_listWidget->selectPreviousSelectableItem();
+            m_listWidget->moveUp();
             return true;
         }
         return false;

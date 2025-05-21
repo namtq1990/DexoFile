@@ -15,9 +15,10 @@ include_directories(util) # Add util directory for header searches
 include_directories(widget) # Add widget directory for header searches
 include_directories(component) # Add component directory
 include_directories(page) # Add page directory
+include_directories(${Qt${QT_VERSION_MAJOR}_INCLUDE_DIRS} ${QT_QTCORE_INCLUDE_DIRS})
 
-find_package(QT NAMES Qt6 Qt5 COMPONENTS Widgets REQUIRED)
-find_package(Qt${QT_VERSION_MAJOR} COMPONENTS Widgets REQUIRED)
+find_package(QT NAMES Qt6 Qt5 COMPONENTS Widgets Core REQUIRED)
+find_package(Qt${QT_VERSION_MAJOR} COMPONENTS Widgets Core REQUIRED)
 
 set(PROJECT_SOURCES
         main.cpp
@@ -48,8 +49,11 @@ set(PROJECT_SOURCES
         widget/menuwidget.ui
         widget/baselist.h
         widget/baselist.cpp
+        widget/basemodel.h
         widget/concentriccircleswidget.h
         widget/concentriccircleswidget.cpp
+        widget/settingitemdelegate.h
+        widget/settingitemdelegate.cpp
         component/component.h
         component/component.cpp
         component/navigationcomponent.h
@@ -58,12 +62,22 @@ set(PROJECT_SOURCES
         component/componentmanager.cpp
         component/inputcomponent.h
         component/inputcomponent.cpp
+        model/basesettingitem.h
+        model/basesettingitem.cpp
+        model/settingmodel.h
+        model/settingmodel.cpp
         page/homepage.h
         page/homepage.cpp
         page/homepage.ui
         page/settingscreen.h
         page/settingscreen.cpp
+        controller/wifi_service.h
+        controller/wifi_service.cpp
+        controller/platform_controller.h
+        controller/platform_controller.cpp
         res/resource.qrc
+        util/dualsocketnotifier.h
+        util/dualsocketnotifier.cpp
 )
 
 if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
@@ -89,7 +103,7 @@ else()
     endif()
 endif()
 
-target_link_libraries(NDT PRIVATE Qt${QT_VERSION_MAJOR}::Widgets)
+target_link_libraries(NDT PRIVATE Qt${QT_VERSION_MAJOR}::Widgets Qt${QT_VERSION_MAJOR}::Core wpa_client)
 
 set_target_properties(NDT PROPERTIES
     MACOSX_BUNDLE_GUI_IDENTIFIER my.example.com

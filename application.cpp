@@ -1,9 +1,27 @@
 #include "application.h"
 #include "thememanager.h" // For ThemeManager::applyDarkTheme
 #include "component/componentmanager.h" // For ComponentManager
+#include "controller/platform_controller.h"
 #include <QStyleFactory>  // For QStyleFactory
+#include <QFile>
+#include <QTextStream>
+#include <iostream>
 
 namespace nucare {
+
+void customLogHandler(QtMsgType type, const QMessageLogContext &context, const QString &msg)
+{
+    QTextStream cerrStream((type == QtMsgType::QtDebugMsg || type == QtMsgType::QtInfoMsg) ? stdout : stderr);
+    cerrStream << msg << Qt::endl;
+
+    // Log to file
+    QFile logFile("/root/ndt.log");
+    if (logFile.open(QIODevice::WriteOnly | QIODevice::Append)) {
+        QTextStream logStream(&logFile);
+        logStream << msg << Qt::endl;
+        logFile.close();
+    }
+}
 
 // Application* Application::m_instance = nullptr; // No longer needed
 
@@ -28,6 +46,7 @@ Application::~Application()
 void Application::initialize()
 {
     QApplication::setStyle(QStyleFactory::create("Fusion"));
+    qInstallMessageHandler(customLogHandler);
 
     // Initialize ThemeManager via ComponentManager first
     // Pass nullptr as parent, as ThemeManager instance is managed by ComponentManager
@@ -49,6 +68,8 @@ void Application::initialize()
     }
 
     ComponentManager::instance().initializeInputComponent(this);
+    ComponentManager::instance().initializePlatformController(this);
+    ComponentManager::instance().initializeWiFiService(this);
     ComponentManager::instance().initializeNavigationComponent();
 }
 
