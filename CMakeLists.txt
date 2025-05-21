@@ -62,6 +62,8 @@ set(PROJECT_SOURCES
         component/componentmanager.cpp
         component/inputcomponent.h
         component/inputcomponent.cpp
+        component/settingmanager.h
+        component/settingmanager.cpp
         model/basesettingitem.h
         model/basesettingitem.cpp
         model/settingmodel.h

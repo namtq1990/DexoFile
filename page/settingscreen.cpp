@@ -12,10 +12,17 @@
 using namespace std;
 
 void navigation::toSetting(navigation::NavigationComponent* navController, navigation::NavigationEntry* entry,
-                           //                   SettingArgs* args,
+                           SubSettingItem* item,
                            const QString& tag) {
     if (!entry->view) {
-        entry->view = new SettingScreen(static_cast<QWidget*>(entry->host));
+        auto view = new SettingScreen(static_cast<QWidget*>(entry->host));
+        view->m_subSetting = item;
+
+        if (!item->parent()) {
+            item->setParent(view);
+        }
+
+        entry->view        = view;
     }
     navController->enter(entry);
 }
@@ -30,12 +37,16 @@ SettingScreen::SettingScreen(QWidget* parent) : BaseScreen(tag::SETTING_TAG, par
     setLayout(mainLayout);
     m_listWidget->setItemDelegate(new SettingItemDelegate(this));
 
-    setupListItems();
     setupViewActions();
 
     // Ensure the list widget has focus to receive potential keyboard events
     // if not solely relying on ViewActions from menu.
     // m_listWidget->setFocus();
+}
+
+void SettingScreen::onCreate(navigation::NavigationArgs* args) {
+    BaseScreen::onCreate(args);
+    setupListItems();
 }
 
 SettingScreen::~SettingScreen() {
@@ -52,26 +63,17 @@ void SettingScreen::setupListItems() {
         item->onClicked();
     });
 
-    auto soundItem = new InfoSettingItem(this);
-    soundItem->setName("Sound")->setIcon(":/icons/sound_on.png");
-    connect(soundItem, &BaseSettingItem::clicked, this, &SettingScreen::handleSoundSetting);
-
-    auto wifiItem = new InfoSettingItem(this);
-    wifiItem->setName("WiFi")->setIcon(":/icons/wifi.png");
-    connect(wifiItem, &BaseSettingItem::clicked, this, &SettingScreen::handleWifiSetting);
-
-    auto backgroundItem = new InfoSettingItem(this);
-    backgroundItem->setName("Measure Background");
-
-    auto settings = std::shared_ptr<QVector<BaseSettingItem*>>(new QVector<BaseSettingItem*>{
-        (new HeaderSettingItem(this))->setName("Setting"),
-        (new SubSettingItem(this))->setSettings(QVector<BaseSettingItem*>({
-            backgroundItem
-        })),
-        soundItem,
-        wifiItem,
-    });
-    m_settingModel->setData(settings);
+    if (!m_subSetting) return;
+    if (auto nodes = m_subSetting->getNodes()) {
+        for (auto setting : *nodes) {
+            if (auto action = setting->getAction()) {
+                connect(setting, &BaseSettingItem::clicked, this, [this, action, setting]() {
+                    QMetaObject::invokeMethod(this, action, Q_ARG(BaseSettingItem*, setting));
+                });
+            }
+        }
+        m_settingModel->setData(nodes);
+    }
 }
 
 void SettingScreen::setupViewActions() {
@@ -79,9 +81,9 @@ void SettingScreen::setupViewActions() {
     // We can customize its name or icon if needed:
     // leftViewAction.name = "Exit"; // Example
 
-    setCenterAction(new ViewAction("OK", [this]() -> bool {
+    setCenterAction(new ViewAction("UP", [this]() -> bool {
         if (m_listWidget) {
-            m_listWidget->performClick();
+            m_listWidget->moveUp();
         }
         return false;
     }));
@@ -94,22 +96,34 @@ void SettingScreen::setupViewActions() {
         return false;
     }));
 
-    setLongRightAction(new ViewAction("Up", [this]() -> bool {
+    setLongCenterAction(new ViewAction("OK", [this]() -> bool {
+        if (isShowLoading()) {
+            return true;
+        }
+
         if (m_listWidget) {
-            m_listWidget->moveUp();
+            m_listWidget->performClick();
             return true;
         }
         return false;
     }));
 }
 
-void SettingScreen::handleSoundSetting() {
+void SettingScreen::openSubSetting(BaseSettingItem* item) {
+    if (auto subs = qobject_cast<SubSettingItem*>(item)) {
+        auto entry = (new navigation::NavigationEntry())->setHost(this->parent());
+        auto tag = getTag() + "_" + subs->getName();
+        navigation::toSetting(getNavigation(), entry, subs, tag);
+    }
+}
+
+void SettingScreen::handleSoundSetting(BaseSettingItem* item) {
     nucare::logI() << "Handling Sound Setting (Navigation Not Implemented)";
     // NavigationComponent* navComp = ComponentManager::instance().navigationComponent();
     // if (navComp) navComp->navigateTo(new SoundPage(this)); // Assuming SoundPage exists
 }
 
-void SettingScreen::handleWifiSetting() {
+void SettingScreen::handleWifiSetting(BaseSettingItem* item) {
     nucare::logI() << "Handling WiFi Setting (Navigation Not Implemented)";
     // NavigationComponent* navComp = ComponentManager::instance().navigationComponent();
     // if (navComp) navComp->navigateTo(new WifiPage(this)); // Assuming WifiPage exists

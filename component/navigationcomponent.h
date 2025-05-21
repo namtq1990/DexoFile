@@ -16,6 +16,7 @@
 #include "component/component.h"
 
 class BaseView;
+class SubSettingItem;
 
 namespace navigation {
 
@@ -169,8 +170,7 @@ protected:
 void exit(NavigationComponent* navController, const bool& isForceQuit);
 void toMainWindow(NavigationComponent* navController, const QString& tag = tag::WINDOW_TAG);
 void toHome(NavigationComponent* navController, NavigationEntry* entry, const QString& tag = tag::HOME_TAG);
-void toSetting(NavigationComponent* navController, NavigationEntry* entry,
-               //                   SettingArgs* args,
+void toSetting(NavigationComponent* navController, NavigationEntry* entry, SubSettingItem* args,
                const QString& tag = tag::SETTING_TAG);
 
 void showWarning(NavigationComponent* navController,

@@ -25,13 +25,14 @@ class BaseSettingItem : public QObject
    public:
     virtual SettingItemType getType() const { return SettingItemType::InfoItem; };
 
-   private:
-    QString  mKey       = nullptr;
-    QString  mName      = nullptr;
-    QString  mIcon      = nullptr;
-    bool     mShowValue = false;
-    bool     mEnabled   = true;
-    QVariant mValue;
+   protected:
+    QString     mKey         = nullptr;
+    QString     mName        = nullptr;
+    QString     mIcon        = nullptr;
+    const char* mClickAction = nullptr;
+    bool        mShowValue   = false;
+    bool        mEnabled     = true;
+    QVariant    mValue;
 
    public:
     BaseSettingItem(QObject* parent = nullptr);
@@ -40,6 +41,7 @@ class BaseSettingItem : public QObject
     QString  getKey() const { return mKey; }
     QString  getName() const { return mName; }
     QString  getIcon() const { return mIcon; }
+    const char*  getAction() const { return mClickAction; }
     bool     getShowValue() const { return mShowValue; }
     bool     isEnabled() const { return mEnabled; }
     QVariant getValue() const { return mValue; }
@@ -49,11 +51,12 @@ class BaseSettingItem : public QObject
     BaseSettingItem* setKey(const QString& key);
     BaseSettingItem* setName(const QString& name);
     BaseSettingItem* setIcon(const QString& icon);
+    BaseSettingItem* setClickAction(const char* actionName);
     BaseSettingItem* setShowValue(bool show);
     void             setValue(QVariant value);
 
    Q_SIGNALS:
-    void clicked();
+    void clicked(BaseSettingItem* p);
     void valueChanged(QVariant newValue);
 
    public slots:
@@ -64,10 +67,11 @@ class SubSettingItem : public BaseSettingItem
 {
     Q_OBJECT
    public:
-    SubSettingItem(QObject* parent = nullptr) : BaseSettingItem(parent) {}
+    SubSettingItem(QObject* parent = nullptr);
     SettingItemType getType() const override { return SettingItemType::SubSettingItem; }
 
-    SubSettingItem* setSettings(QVector<BaseSettingItem*> &&nodes);
+    SubSettingItem*                            setSettings(QVector<BaseSettingItem*>&& nodes);
+    std::shared_ptr<QVector<BaseSettingItem*>> getNodes();
 
    private:
     std::shared_ptr<QVector<BaseSettingItem*>> mNodes;
@@ -85,7 +89,7 @@ class ChoiceSettingItem : public BaseSettingItem
 {
     Q_OBJECT
    public:
-    ChoiceSettingItem(QObject* parent = nullptr) : BaseSettingItem(parent) {}
+    ChoiceSettingItem(QMap<QString, QVariant>&& choices, QObject* parent = nullptr);
     SettingItemType getType() const override { return SettingItemType::ChoiceSettingItem; }
 
    private:
@@ -96,7 +100,7 @@ class EditorSettingItem : public BaseSettingItem
 {
     Q_OBJECT
    public:
-    EditorSettingItem(QObject* parent = nullptr) : BaseSettingItem(parent) {}
+    EditorSettingItem(QObject* parent = nullptr);
     SettingItemType getType() const override { return SettingItemType::EditorSettingItem; }
 };
 

@@ -23,7 +23,14 @@ void BaseSettingItem::setEnabled(bool isEnabled) { mEnabled = isEnabled; }
 BaseSettingItem* BaseSettingItem::setKey(const QString& key) { mKey = key; return this; }
 BaseSettingItem* BaseSettingItem::setName(const QString& name) { mName = name; return this; }
 BaseSettingItem* BaseSettingItem::setIcon(const QString& icon) { mIcon = icon; return this; }
-BaseSettingItem* BaseSettingItem::setShowValue(bool show) { mShowValue = show; return this; }
+BaseSettingItem* BaseSettingItem::setClickAction(const char* actionName) {
+    mClickAction = actionName;
+    return this;
+}
+BaseSettingItem* BaseSettingItem::setShowValue(bool show) {
+    mShowValue = show;
+    return this;
+}
 
 void BaseSettingItem::setValue(QVariant value) {
     if (mValue != value) {
@@ -34,9 +41,25 @@ void BaseSettingItem::setValue(QVariant value) {
 
 void BaseSettingItem::onClicked()
 {
-    emit clicked();
+    emit clicked(this);
+}
+
+SubSettingItem::SubSettingItem(QObject* parent) : BaseSettingItem(parent) {
+     mClickAction = "openSubSetting";
 }
 
 SubSettingItem* SubSettingItem::setSettings(QVector<BaseSettingItem*>&& nodes) {
     mNodes = std::make_shared<QVector<BaseSettingItem*>>(nodes);
+    return this;
 }
+
+std::shared_ptr<QVector<BaseSettingItem*>> SubSettingItem::getNodes() {
+    return mNodes;
+}
+
+ChoiceSettingItem::ChoiceSettingItem(QMap<QString, QVariant>&& choices, QObject* parent)
+    : mData(choices), BaseSettingItem(parent) {
+    mClickAction = "openChoice";
+}
+
+EditorSettingItem::EditorSettingItem(QObject* parent) : BaseSettingItem(parent) { mClickAction = "openEditor"; }

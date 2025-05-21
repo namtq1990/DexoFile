@@ -1,5 +1,6 @@
 #include "page/homepage.h"
 #include "ui_homepage.h"  // Generated UI header
+#include "component/settingmanager.h"
 using namespace navigation;
 
 void navigation::toHome(NavigationComponent* navController, NavigationEntry* entry, const QString& tag) {
@@ -45,8 +46,10 @@ HomePage::HomePage(QWidget* parent) : BaseScreen(tag::HOME_TAG, parent), ui(new 
     setRightAction(new ViewAction(
         "Settings",
         [this]() {
-            navigation::toSetting(getNavigation(), new navigation::NavigationEntry(navigation::CHILD_IN_WINDOW, nullptr,
-                                                                                   nullptr, this->parent()));
+            navigation::toSetting(
+                getNavigation(),
+                new navigation::NavigationEntry(navigation::CHILD_IN_WINDOW, nullptr, nullptr, this->parent()),
+                setting::buildSettingTree());
             return true;
         },
         nullptr));

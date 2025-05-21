@@ -25,16 +25,22 @@ private:
     // If not using a .ui file for the layout of SettingScreen itself:
     BaseList *m_listWidget;
     SettingModel* m_settingModel;
+    SubSettingItem* m_subSetting = nullptr;
 
-    // If using a .ui file that contains the BaseListWidget:
-    // Ui::SettingScreen *ui;
-    // And m_listWidget would be ui->yourBaseListWidgetName
+    void onCreate(navigation::NavigationArgs* arg) override;
 
     void setupListItems();
     void setupViewActions();
+    
 
-    void handleSoundSetting();
-    void handleWifiSetting();
+    friend void navigation::toSetting(navigation::NavigationComponent* navController, navigation::NavigationEntry* entry,
+                           SubSettingItem* item,
+                           const QString& tag);
+
+private slots:
+ void openSubSetting(BaseSettingItem* item);
+ void handleSoundSetting(BaseSettingItem* item);
+ void handleWifiSetting(BaseSettingItem* item);
 };
 
 #endif // SETTINGSCREEN_H
