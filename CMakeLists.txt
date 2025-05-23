@@ -39,6 +39,7 @@ set(PROJECT_SOURCES
         base/basewindow.cpp
         base/basedialog.h
         base/basedialog.cpp
+        base/basedialog.ui
         widget/NcButton.h
         widget/NcButton.cpp
         widget/statusbarwidget.h
@@ -52,6 +53,9 @@ set(PROJECT_SOURCES
         widget/basemodel.h
         widget/concentriccircleswidget.h
         widget/concentriccircleswidget.cpp
+        widget/ChoicesDialog.h
+        widget/ChoicesDialog.cpp
+        widget/ChoicesDialog.ui
         widget/settingitemdelegate.h
         widget/settingitemdelegate.cpp
         component/component.h

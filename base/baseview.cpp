@@ -52,7 +52,7 @@ BaseView::BaseView(const QString& tag) : mTag(tag), mNavigation(nullptr) {
 }
 
 BaseView::~BaseView() {
-    nucare::logD() << "Screen " << mTag << " is Destroyed";
+    nucare::logD() << "Screen " << mTag << '@' << this << " is Destroyed";
     if (mChildNavigation) {
         delete mChildNavigation;
     }
@@ -61,19 +61,19 @@ BaseView::~BaseView() {
 void BaseView::onCreate(NavigationArgs* entry) {
     Q_UNUSED(entry)
     setFlag(FLAG_CREATED);
-    nucare::logD() << "Screen " << mTag << " is onCreate";
+    nucare::logD() << "Screen " << mTag << '@' << this << " is onCreate";
 }
 
 void BaseView::onEnter() {
-    nucare::logD() << "Screen " << mTag << " is Enter";
+    nucare::logD() << "Screen " << mTag << '@' << this << " is Enter";
 }
 
 void BaseView::onExit() {
-    nucare::logD() << "Screen " << mTag << " is unBinding";
+    nucare::logD() << "Screen " << mTag << '@' << this << " is unBinding";
 }
 
 void BaseView::onDestroy() {
-    nucare::logD() << "Screen " << mTag << " is onDestroy";
+    nucare::logD() << "Screen " << mTag << '@' << this << " is onDestroy";
 }
 
 void BaseView::changeEvent(QEvent *ev) {

@@ -5,6 +5,7 @@
 #include "component/navigationcomponent.h"  // For NavigationComponent
 #include "model/settingmodel.h"
 #include "widget/settingitemdelegate.h"
+#include "widget/ChoicesDialog.h"
 #include "model/basesettingitem.h"
 #include <QVBoxLayout>
 #include <QList>
@@ -12,22 +13,23 @@
 using namespace std;
 
 void navigation::toSetting(navigation::NavigationComponent* navController, navigation::NavigationEntry* entry,
-                           SubSettingItem* item,
-                           const QString& tag) {
+                           SubSettingItem* item, const QString& tag) {
     if (!entry->view) {
         auto view = new SettingScreen(static_cast<QWidget*>(entry->host));
+        view->setTag(tag);
         view->m_subSetting = item;
 
         if (!item->parent()) {
             item->setParent(view);
         }
 
-        entry->view        = view;
+        entry->view = view;
     }
     navController->enter(entry);
 }
 
-SettingScreen::SettingScreen(QWidget* parent) : BaseScreen(tag::SETTING_TAG, parent), m_listWidget(nullptr), m_settingModel(new SettingModel(this)) {
+SettingScreen::SettingScreen(QWidget* parent)
+    : BaseScreen(tag::SETTING_TAG, parent), m_listWidget(nullptr), m_settingModel(new SettingModel(this)) {
     m_listWidget = new BaseList(this);
     m_listWidget->setModel(m_settingModel);
 
@@ -49,6 +51,11 @@ void SettingScreen::onCreate(navigation::NavigationArgs* args) {
     setupListItems();
 }
 
+void SettingScreen::onDestroy()
+{
+    BaseScreen::onDestroy();
+}
+
 SettingScreen::~SettingScreen() {
     // m_listWidget is a child of this widget and will be deleted automatically
     // when SettingScreen is deleted, especially if added to a layout.
@@ -64,6 +71,7 @@ void SettingScreen::setupListItems() {
     });
 
     if (!m_subSetting) return;
+
     if (auto nodes = m_subSetting->getNodes()) {
         for (auto setting : *nodes) {
             if (auto action = setting->getAction()) {
@@ -111,8 +119,8 @@ void SettingScreen::setupViewActions() {
 
 void SettingScreen::openSubSetting(BaseSettingItem* item) {
     if (auto subs = qobject_cast<SubSettingItem*>(item)) {
-        auto entry = (new navigation::NavigationEntry())->setHost(this->parent());
-        auto tag = getTag() + "_" + subs->getName();
+        auto entry = (new navigation::NavigationEntry(navigation::CHILD_IN_WINDOW))->setHost(this->parent());
+        auto tag   = getTag() + "_" + subs->getName();
         navigation::toSetting(getNavigation(), entry, subs, tag);
     }
 }
@@ -127,4 +135,14 @@ void SettingScreen::handleWifiSetting(BaseSettingItem* item) {
     nucare::logI() << "Handling WiFi Setting (Navigation Not Implemented)";
     // NavigationComponent* navComp = ComponentManager::instance().navigationComponent();
     // if (navComp) navComp->navigateTo(new WifiPage(this)); // Assuming WifiPage exists
+}
+
+void SettingScreen::openChoice(BaseSettingItem* item) {
+    auto choices = qobject_cast<ChoiceSettingItem*>(item);
+    navigation::toChoiceDlg(this, new ChoicesDialogArgs(choices->getChoices(), item->getName()));
+}
+
+void SettingScreen::openSwVersion(BaseSettingItem *item)
+{
+    navigation::showSuccess(this, "SW version: 0.0.1");
 }

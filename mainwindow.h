@@ -19,6 +19,8 @@ public:
 
     void onCreate(navigation::NavigationArgs* args) override;
 
+    void showEvent(QShowEvent* e);
+
 private:
     Ui::MainWindow *ui;
 };

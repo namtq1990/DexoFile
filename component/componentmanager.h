@@ -42,10 +42,10 @@ private:
     ComponentManager(); // Private constructor for singleton
 
     QScopedPointer<navigation::NavigationComponent> m_navigationComponent;
-    QScopedPointer<ThemeManager> m_themeManager;
+    ThemeManager* m_themeManager = nullptr;
     QScopedPointer<nucare::InputComponent> m_inputComponent; // Member for nucare::InputComponent
-    QScopedPointer<PlatformController> m_platformController;
-    QScopedPointer<WiFiService> m_wifiService;
+    PlatformController* m_platformController = nullptr;
+    WiFiService* m_wifiService = nullptr;
     // If ThemeManager becomes a QObject and needs QObject parenting for lifetime,
     // QPointer might be used if it's parented to something else,
     // or it can be a raw pointer if ComponentManager is its QObject parent.

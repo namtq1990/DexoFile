@@ -28,6 +28,7 @@ private:
     SubSettingItem* m_subSetting = nullptr;
 
     void onCreate(navigation::NavigationArgs* arg) override;
+    void onDestroy() override;
 
     void setupListItems();
     void setupViewActions();
@@ -39,6 +40,8 @@ private:
 
 private slots:
  void openSubSetting(BaseSettingItem* item);
+ void openChoice(BaseSettingItem* item);
+ void openSwVersion(BaseSettingItem* item);
  void handleSoundSetting(BaseSettingItem* item);
  void handleWifiSetting(BaseSettingItem* item);
 };

@@ -23,6 +23,8 @@ BaseList::BaseList(QWidget *parent) : QTableView(parent) {
 
     QPalette p;
     p.setColor(QPalette::ColorRole::Highlight, QColor(0x0097e0));
+    p.setColor(QPalette::Window, Qt::transparent);
+    p.setColor(QPalette::Base, Qt::transparent);
     setPalette(p);
 
     // Connect the scroll bar's valueChanged signal
@@ -30,7 +32,10 @@ BaseList::BaseList(QWidget *parent) : QTableView(parent) {
 
     verticalHeader()->setDefaultSectionSize(25);
 
-    setStyleSheet("QTableView { background: transparent; }");
+//    setStyleSheet("QTableView { background: transparent; }");
+
+    setAutoFillBackground(false);
+    setFocusPolicy(Qt::FocusPolicy::ClickFocus);
 }
 
 void BaseList::updateHeaderVisibility(int value)

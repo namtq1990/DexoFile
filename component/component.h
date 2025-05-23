@@ -8,7 +8,7 @@ class Component
 {
 public:
     explicit Component(const QString& tag);
-    virtual ~Component() = default;
+    virtual ~Component();
 
     QString tag() const;
 

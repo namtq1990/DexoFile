@@ -94,6 +94,9 @@ class ChoiceSettingItem : public BaseSettingItem
 
    private:
     QMap<QString, QVariant> mData;
+
+public:
+    auto getChoices() { return mData; }
 };
 
 class EditorSettingItem : public BaseSettingItem

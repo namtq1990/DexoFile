@@ -19,6 +19,8 @@ public:
     explicit MenuWidget(QWidget *parent = nullptr);
     ~MenuWidget();
 
+    QSize sizeHint() const override;
+
     navigation::NavigationComponent* navigation();
     void updateMenu();
 

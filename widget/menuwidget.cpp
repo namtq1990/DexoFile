@@ -49,6 +49,8 @@ MenuWidget::~MenuWidget()
     delete ui;
 }
 
+QSize MenuWidget::sizeHint() const { return ui->btnCenter->iconSize(); }
+
 // Slots for global navigation events
 void MenuWidget::onGlobalViewPushed(navigation::NavigationComponent* source, BaseView* newView)
 {

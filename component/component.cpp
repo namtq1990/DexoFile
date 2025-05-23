@@ -5,6 +5,11 @@ Component::Component(const QString& tag)
 {
 }
 
+Component::~Component()
+{
+    logD() << "Deleted Component " << m_tag;
+}
+
 QString Component::tag() const
 {
     return m_tag;

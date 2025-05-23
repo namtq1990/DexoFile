@@ -96,4 +96,6 @@ inline QDebug logW() {
 
 } // namespace nucare
 
+#define NC_UTIL_CLEAR_BGR(v) v->setAttribute(Qt::WA_NoSystemBackground)
+
 #endif // NDT_UTIL_H

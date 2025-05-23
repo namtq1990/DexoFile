@@ -88,8 +88,11 @@ public:
 
     virtual QVariant data(const QModelIndex &index, int role) const
     {
-        Q_UNUSED(role)
-        return rawData(index.row());
+        if (role == Qt::DisplayRole) {
+            return rawData(index.row());
+        }
+
+        return QVariant();
     }
 };
 

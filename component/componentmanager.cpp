@@ -51,7 +51,7 @@ void ComponentManager::initializeThemeManager(QObject* parent)
         // If ThemeManager is not a QObject, the parent parameter might be for a different purpose
         // or not needed. For now, let's assume it can take a parent.
         // If ThemeManager's constructor is just ThemeManager(), then remove 'parent'.
-        m_themeManager.reset(new ThemeManager(parent)); // Adjust if ThemeManager constructor is different
+        m_themeManager = new ThemeManager(parent); // Adjust if ThemeManager constructor is different
         logI() << "ThemeManager initialized.";
     } else {
         logE() << "ThemeManager already initialized.";
@@ -63,7 +63,7 @@ void ComponentManager::initializeInputComponent(QObject* parent)
     if (!m_inputComponent) {
         // InputComponent constructor is nucare::InputComponent(QObject *parent = nullptr, const QString& tag = "InputComponent")
         // With 'using nucare::InputComponent;', we can use 'InputComponent' directly.
-        m_inputComponent.reset(new InputComponent(parent)); // Uses default tag "InputComponent"
+        m_inputComponent.reset(new InputComponent()); // Uses default tag "InputComponent"
         if (m_inputComponent && m_inputComponent->initialize()) { // Check m_inputComponent after new
             logI() << "InputComponent initialized.";
         } else {
@@ -78,7 +78,7 @@ void ComponentManager::initializeInputComponent(QObject* parent)
 void ComponentManager::initializeWiFiService(QObject* parent)
 {
     if (!m_wifiService) {
-        m_wifiService.reset(new WiFiService(parent));
+        m_wifiService = new WiFiService(parent);
         if (m_wifiService) {
             logI() << "WiFiService initialized.";
         } else {
@@ -102,7 +102,7 @@ ThemeManager* ComponentManager::themeManager() const
     if (!m_themeManager) {
         logE() << "ThemeManager accessed before initialization!";
     }
-    return m_themeManager.data();
+    return m_themeManager;
 }
 
 // Return type matches header: nucare::InputComponent*
@@ -120,7 +120,7 @@ WiFiService* ComponentManager::wifiService() const
     if (!m_wifiService) {
         logE() << "WiFiService accessed before initialization!";
     }
-    return m_wifiService.data();
+    return m_wifiService;
 }
 
 PlatformController* ComponentManager::platformController() const
@@ -128,13 +128,13 @@ PlatformController* ComponentManager::platformController() const
     if (!m_platformController) {
         logE() << "PlatformController accessed before initialization!";
     }
-    return m_platformController.data();
+    return m_platformController;
 }
 
 void ComponentManager::initializePlatformController(QObject* parent)
 {
      if (!m_platformController) {
-         m_platformController.reset(new PlatformController(parent));
+         m_platformController = new PlatformController(parent);
          logI() << "PlatformController initialized.";
      } else {
          logE() << "PlatformController already initialized.";

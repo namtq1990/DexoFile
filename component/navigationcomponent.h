@@ -17,6 +17,7 @@
 
 class BaseView;
 class SubSettingItem;
+class ChoicesDialogArgs;
 
 namespace navigation {
 
@@ -172,6 +173,11 @@ void toMainWindow(NavigationComponent* navController, const QString& tag = tag::
 void toHome(NavigationComponent* navController, NavigationEntry* entry, const QString& tag = tag::HOME_TAG);
 void toSetting(NavigationComponent* navController, NavigationEntry* entry, SubSettingItem* args,
                const QString& tag = tag::SETTING_TAG);
+void toChoiceDlg(NavigationComponent* navController,
+                 NavigationEntry* entry,
+                 ChoicesDialogArgs* args,
+                 const QString& tag = tag::CHOICE_TAG);
+NavigationEntry* toChoiceDlg(BaseView* parent, ChoicesDialogArgs* args);
 
 void showWarning(NavigationComponent* navController,
                  NavigationEntry* entry,
@@ -181,6 +187,8 @@ void showWarning(NavigationComponent* navController,
 void showWarning(const QString&& text,
                  const QString&& tag = tag::WARNING_DLG);
 
+NavigationEntry* showWarning(BaseView* parent, const QString&& text, const QString& tag = tag::WARNING_DLG);
+
 void showSuccess(NavigationComponent* navController,
                  NavigationEntry* entry,
                  const QString& text,
@@ -188,6 +196,8 @@ void showSuccess(NavigationComponent* navController,
 
 void showSuccess(const QString&& text,
                  const QString&& tag = tag::SUCCESS_DLG);
+
+NavigationEntry* showSuccess(BaseView* parent, const QString&& text, const QString& tag = tag::SUCCESS_DLG);
 
 void showShortMessage(const QString&& text);
 
