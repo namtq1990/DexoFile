@@ -18,6 +18,11 @@
 // You could also add build date/time if needed, e.g., using __DATE__ and __TIME__
 // #define APP_BUILD_TIMESTAMP __DATE__ " " __TIME__
 
+namespace nucare {
+constexpr int CHSIZE = 1024;
+constexpr int HW_CHSIZE = 2048;
+}  // namespace nucare
+
 namespace tag {
 
 constexpr const char* WARNING_DLG = "Warning_Dlg";

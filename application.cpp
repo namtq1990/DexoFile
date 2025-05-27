@@ -48,28 +48,17 @@ void Application::initialize()
     QApplication::setStyle(QStyleFactory::create("Fusion"));
     qInstallMessageHandler(customLogHandler);
 
-    // Initialize ThemeManager via ComponentManager first
-    // Pass nullptr as parent, as ThemeManager instance is managed by ComponentManager
-    // and global theme application is done by ThemeManager::applyDarkTheme
-    ComponentManager::instance().initializeThemeManager(nullptr);
+    // Initialize all components via ComponentManager, passing 'this' as the parent
+    ComponentManager::instance().initializeComponents(this);
 
-    // Then apply the theme using the now-initialized ThemeManager
-    // This assumes ThemeManager::applyDarkTheme is a static method or
-    // can be called on a globally accessible ThemeManager instance if needed.
-    // ThemeManager methods are now non-static.
+    // Apply the theme after ThemeManager is initialized
     ThemeManager* tm = ComponentManager::instance().themeManager();
     if (tm) {
         tm->applyDarkTheme(this); // 'this' is the QApplication instance
     } else {
-        // Log error: ThemeManager instance not available.
-        // This implies an issue with ComponentManager initialization order or ThemeManager init.
-        // For now, we assume tm will be valid if initializeThemeManager was successful.
-        nucare::logE() << "Application::initialize: ThemeManager instance is null after initialization!";
+        nucare::logE() << "Application::initialize: ThemeManager instance is null after component initialization!";
     }
 
-    ComponentManager::instance().initializeInputComponent(this);
-    ComponentManager::instance().initializePlatformController(this);
-    ComponentManager::instance().initializeWiFiService(this);
     ComponentManager::instance().initializeNavigationComponent();
 }
 

@@ -37,8 +37,8 @@ SubSettingItem* setting::buildSettingTree() {
                 (new InfoSettingItem(ret))->setName("Energy Calibration"),
                 (new ChoiceSettingItem(
                      {
-                         {"Ba", "Ba"},
-                         {"Cs137", "Cs137"},
+                         {"Eu-152", "Eu-152"},
+                         {"Ba-133​", "Ba-133​"},
                      },
                      ret))
                     ->setName("Selec Source"),

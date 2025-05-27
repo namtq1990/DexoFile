@@ -1,6 +1,7 @@
 #include "componentmanager.h"
 #include "navigationcomponent.h"
 #include "component/inputcomponent.h" // Include InputComponent (full path for clarity)
+#include "component/detectorcomponent.h" // Include DetectorComponent
 #include "controller/platform_controller.h"
 #include "../thememanager.h"
 #include <QApplication>
@@ -19,6 +20,15 @@ ComponentManager& ComponentManager::instance()
 {
     static ComponentManager inst; // Meyers' Singleton
     return inst;
+}
+
+void ComponentManager::initializeComponents(QObject* parent)
+{
+    initializeThemeManager(parent);
+    initializeInputComponent(parent);
+    initializePlatformController(parent);
+    initializeWiFiService(parent);
+    initializeDetectorComponent(parent); // Initialize DetectorComponent with parent
 }
 
 ComponentManager::ComponentManager()
@@ -86,6 +96,15 @@ void ComponentManager::initializeWiFiService(QObject* parent)
         }
     } else {
         logE() << "WiFiService already initialized.";
+    }
+}
+
+void ComponentManager::initializeDetectorComponent(QObject *parent)
+{
+    if (!m_detectorComponent) {
+        m_detectorComponent = QPointer<nucare::DetectorComponent>(new nucare::DetectorComponent(parent));
+        m_detectorComponent->initialize("/dev/ttyS2");
+        m_detectorComponent->start();
     }
 }
 

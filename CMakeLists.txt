@@ -17,8 +17,8 @@ include_directories(component) # Add component directory
 include_directories(page) # Add page directory
 include_directories(${Qt${QT_VERSION_MAJOR}_INCLUDE_DIRS} ${QT_QTCORE_INCLUDE_DIRS})
 
-find_package(QT NAMES Qt6 Qt5 COMPONENTS Widgets Core REQUIRED)
-find_package(Qt${QT_VERSION_MAJOR} COMPONENTS Widgets Core REQUIRED)
+find_package(QT NAMES Qt6 Qt5 COMPONENTS Widgets Core SerialPort REQUIRED)
+find_package(Qt${QT_VERSION_MAJOR} COMPONENTS Widgets Core SerialPort REQUIRED)
 
 set(PROJECT_SOURCES
         main.cpp
@@ -66,12 +66,16 @@ set(PROJECT_SOURCES
         component/componentmanager.cpp
         component/inputcomponent.h
         component/inputcomponent.cpp
+        component/detectorcomponent.h
+        component/detectorcomponent.cpp
         component/settingmanager.h
         component/settingmanager.cpp
         model/basesettingitem.h
         model/basesettingitem.cpp
         model/settingmodel.h
         model/settingmodel.cpp
+        model/Types.h
+        model/Spectrum.h
         page/homepage.h
         page/homepage.cpp
         page/homepage.ui
@@ -109,7 +113,7 @@ else()
     endif()
 endif()
 
-target_link_libraries(NDT PRIVATE Qt${QT_VERSION_MAJOR}::Widgets Qt${QT_VERSION_MAJOR}::Core wpa_client)
+target_link_libraries(NDT PRIVATE Qt${QT_VERSION_MAJOR}::Widgets Qt${QT_VERSION_MAJOR}::Core Qt${QT_VERSION_MAJOR}::SerialPort wpa_client)
 
 set_target_properties(NDT PROPERTIES
     MACOSX_BUNDLE_GUI_IDENTIFIER my.example.com
