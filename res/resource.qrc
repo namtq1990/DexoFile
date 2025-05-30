@@ -3,5 +3,8 @@
         <file alias="wifi.png">icons/wifi.png</file>
         <file alias="sound_on.png">icons/sound_on.png</file>
         <file alias="menu_back.png">icons/menu_back.png</file>
+        <file alias="menu_down">icons/menu_down.png</file>
+        <file alias="menu_ok">icons/menu_ok.png</file>
+        <file alias="menu_up">icons/menu_up.png</file>
     </qresource>
 </RCC>

@@ -2,11 +2,16 @@
 #include "navigationcomponent.h"
 #include "component/inputcomponent.h" // Include InputComponent (full path for clarity)
 #include "component/detectorcomponent.h" // Include DetectorComponent
+#include "component/ncmanager.h" // Include NcManager
+#include "component/databasemanager.h" // Include DatabaseManager
 #include "controller/platform_controller.h"
 #include "../thememanager.h"
+#include "util/nc_exception.h"
 #include <QApplication>
 #include <QStackedWidget>
 #include <QObject>
+#include <QFileInfo>
+#include <QStandardPaths>
 
 using namespace navigation;
 
@@ -24,11 +29,53 @@ ComponentManager& ComponentManager::instance()
 
 void ComponentManager::initializeComponents(QObject* parent)
 {
+    if (mDataDir.isEmpty()) {
+        QStringList paths = {"/root"};
+        for (auto& p : paths) {
+            QFileInfo info(p);
+            if (info.isDir() && info.isWritable()) {
+                mDataDir = p;
+                goto final;
+            }
+        }
+
+        paths = QStandardPaths::standardLocations(QStandardPaths::AppDataLocation);
+        paths.erase(std::remove_if(paths.begin(), paths.end(),
+                                   [](const QString& str) {
+                                       return str.startsWith("/usr/local");
+                                   }),
+                    paths.end());
+        if (paths.empty()) NC_THROW(nucare::ErrorCode::FileNotFound, "Can't find any data directory");
+
+        for (auto it = paths.rbegin(); it != paths.rend(); it++) {
+            // Prefer data path in /usr
+            auto p = std::forward<QString>(*it);
+            logD() << "Candidate data path: " << p;
+
+            if (p.contains("/usr/share")) {
+                QFileInfo finfo("/usr/share");
+
+                if (finfo.isDir() && finfo.isWritable()) {
+                    mDataDir = p;
+                    break;
+                }
+            } else {
+                mDataDir = p;
+            }
+        }
+
+    final:
+        mDataDir += "/NDT";
+        logD() << "Selected data directory at: " << mDataDir;
+    }
+
     initializeThemeManager(parent);
     initializeInputComponent(parent);
     initializePlatformController(parent);
+    initializeDatabaseManager(parent);
     initializeWiFiService(parent);
     initializeDetectorComponent(parent); // Initialize DetectorComponent with parent
+    initializeNcManager(parent); // Initialize NcManager
 }
 
 ComponentManager::ComponentManager()
@@ -103,8 +150,34 @@ void ComponentManager::initializeDetectorComponent(QObject *parent)
 {
     if (!m_detectorComponent) {
         m_detectorComponent = QPointer<nucare::DetectorComponent>(new nucare::DetectorComponent(parent));
-        m_detectorComponent->initialize("/dev/ttyS2");
+        m_detectorComponent->open("/dev/ttyS2");
         m_detectorComponent->start();
+    }
+}
+
+void ComponentManager::initializeNcManager(QObject *parent)
+{
+    if (!m_ncManager) {
+        m_ncManager = QSharedPointer<NcManager>(new NcManager("NcManager"));
+        // Connect DetectorComponent's data ready signal to NcManager's slot
+        QObject::connect(m_detectorComponent.data(), &nucare::DetectorComponent::packageReceived,
+                         m_ncManager.data(), &NcManager::onRecvPackage);
+        QObject::connect(m_detectorComponent.data(), &nucare::DetectorComponent::detectorInfoReceived,
+                         m_ncManager.data(), &NcManager::onRecvGC);
+        logI() << "NcManager initialized.";
+    } else {
+        logE() << "NcManager already initialized.";
+    }
+}
+
+void ComponentManager::initializeDatabaseManager(QObject* parent)
+{
+    if (!m_databaseManager) {
+        m_databaseManager = QPointer<nucare::DatabaseManager>(new nucare::DatabaseManager(parent));
+        m_databaseManager->initialize(mDataDir);
+        logI() << "DatabaseManager initialized.";
+    } else {
+        logE() << "DatabaseManager already initialized.";
     }
 }
 
@@ -140,6 +213,24 @@ WiFiService* ComponentManager::wifiService() const
         logE() << "WiFiService accessed before initialization!";
     }
     return m_wifiService;
+}
+
+QPointer<nucare::DatabaseManager> ComponentManager::databaseManager() const
+{
+    if (!m_databaseManager) {
+        logE() << "DatabaseManager accessed before initialization!";
+    }
+    return m_databaseManager;
+}
+
+QString ComponentManager::dataDir() const { return mDataDir; }
+
+QSharedPointer<NcManager> ComponentManager::ncManager() const
+{
+    if (!m_ncManager) {
+        logE() << "NcManager accessed before initialization!";
+    }
+    return m_ncManager;
 }
 
 PlatformController* ComponentManager::platformController() const

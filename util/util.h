@@ -6,6 +6,7 @@
 #include <QFuture>
 #include <QFutureWatcher>
 #include <functional>
+#include "model/Matrix.h"
 
 namespace nucare {
 
@@ -92,6 +93,121 @@ inline QDebug logE() {
 
 inline QDebug logW() {
     return createLogStream(QtWarningMsg, "WARN");
+}
+
+template<class P>
+QString toString(const P& p);
+template <class P>
+P fromString(const QString& s);
+
+template <typename T, size_t N, typename O = float, typename Container = std::list<T>>
+struct Average {
+    static_assert(std::is_arithmetic<T>::value, "Template parameter T must be number");
+
+    Container values;
+    O sum = T(0);
+
+    Average() {}
+    size_t size() { return N; }
+
+    O calculate() const {
+        if (values.empty()) {
+            return 0;
+        }
+
+        return sum / values.size();
+    }
+
+    void addValue(T value) {
+        if (values.size() >= N) {
+            sum -= values.front();
+            values.pop_front();
+        }
+
+        values.push_back(value);
+        sum += value;
+    }
+
+    O addedValue(T value) {
+        addValue(value);
+        return calculate();
+    }
+
+    void reset() {
+        values.clear();
+        sum = T(0);
+    }
+};
+
+template <class T>
+int indexOfMax(const T* list, const nucare::uint start, const nucare::uint end) {
+    nucare::uint max = start;
+    for (nucare::uint i = start; i <= end; i++) {
+        if (list[i] > list[max]) {
+            max = i;
+        }
+    }
+
+    return max;
+}
+
+namespace math {
+
+/**
+ * @brief quadratic return value of ax^2 + bx + c
+ * @param x
+ * @param params    params array, param[0] -> a, param[1] -> b, param[2] -> c
+ */
+inline double quadratic(const double x, const double* params) {
+    return params[0] * x * x + params[1] * x + params[2];
+}
+
+/**
+ * @brief cubic return Cubic function value: ax^3 + bx^2 + cx + d
+ * @param x
+ * @param params    params array, param[0] -> a, param[1] -> b, param[2] -> c, param[3] -> d
+ */
+inline double cubic(const double x, const double* params) {
+    return params[0] * x * x *x + params[1] * x * x + params[2] * x + params[3];
+}
+
+/**
+ * @brief quartic return Quartic function value: aX^4 + bX^3 + cX^2 + dX + e
+ * @param x
+ * @param params    Array len 5, p[0] -> a, p[1] -> b, p[2] -> c, p[3] -> d, p[4] -> e
+ */
+inline double quartic(const double x, const double* params) {
+    return params[0] * x * x * x * x
+            + params[1] * x * x * x
+            + params[2] * x * x
+            + params[3] * x
+            + params[4];
+}
+
+/**
+ * @brief quadraticEquation Solve equation ax^2 + bx + c = 0
+ * @return
+ */
+double quadraticEquation(const double a, const double b, const double c);
+
+/**
+ * @brief linear    Compute Linear value of position, in a Linear line of start and end
+ */
+double linear(const double xStart, const double xEnd, const double yStart, const double yEnd, double position);
+
+/**
+ * @brief return determine of matrix 3x3
+ * @return det(m)
+ */
+inline double determine(const nucare::math::Matrix& m) {
+    return m.value(0, 0) * m.value(1, 1) * m.value(2, 2)
+            + m.value(2, 0) * m.value(0, 1) * m.value(1, 2)
+            + m.value(1, 0) * m.value(2, 1) * m.value(0, 2)
+            - m.value(0, 2) * m.value(1, 1) * m.value(2, 0)
+            - m.value(0, 0) * m.value(1, 2) * m.value(2, 1)
+            - m.value(1, 0) * m.value(0, 1) * m.value(2, 2);
+}
+
 }
 
 } // namespace nucare

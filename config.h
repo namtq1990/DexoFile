@@ -21,6 +21,15 @@
 namespace nucare {
 constexpr int CHSIZE = 1024;
 constexpr int HW_CHSIZE = 2048;
+
+
+constexpr int BINSIZE = 850;
+
+constexpr double CS137_PEAK1 = 32.0;
+constexpr double CS137_PEAK2 = 661.66;
+constexpr double K40_PEAK = 1461;
+constexpr double Co60_PEAK = 1332;
+constexpr double Co60_WND = 0.3;
 }  // namespace nucare
 
 namespace tag {

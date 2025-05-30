@@ -1,26 +1,36 @@
 #include "detectorcomponent.h"
+#include "model/DetectorProp.h"
+#include "model/DetectorCalibConfig.h"
+#include "component/databasemanager.h"
+#include "component/componentmanager.h"
 #include "util/util.h" // For logging
-#include <QSerialPortInfo> // For dynamic port finding (optional, but good to have)
+#include "util/nc_exception.h"
+#include "util/NcLibrary.h"
+
+using namespace std;
 
 namespace nucare {
 
 // Define the Payload struct for detector info
-struct Payload {
-    char header[2];     // GD
-    uint16_t gain;
-    uint16_t k40Ch;
-    uint16_t detectorCode;
-    uint16_t ch32Kev;
-    uint16_t ch662Kev;
-    char padding1[4];
-    char temperatureFlag;
-    uint16_t temperature;
-    char serial[6];
-    char padding2;
-    char tail[2];
-} __attribute__((__packed__));
+union GcPackage {
+    char Bytes[28]; // Total size of the payload
+    struct Payload {
+        char header[2];     // GD
+        uint16_t gain;
+        uint16_t k40Ch;
+        uint16_t detectorCode;
+        uint16_t ch32Kev;
+        uint16_t ch662Kev;
+        char padding1[4];
+        char temperatureFlag;
+        uint16_t temperature;
+        char serial[6];
+        char padding2;
+        char tail[2];
+    } __attribute__((__packed__));
+};
 
-static_assert (sizeof(Payload) == 28, "Invalid size for payload");
+static_assert (sizeof(GcPackage::Payload) == sizeof(GcPackage::Bytes), "Invalid size for GcPackage union");
 
 
 // Define the Package union for continuous data
@@ -57,8 +67,51 @@ static_assert (sizeof(Package::Payload) == sizeof (Package::Bytes), "Invalid siz
 constexpr char PACKAGE_HEADER[4] = {'U', 'U', 'D', '0'};
 constexpr char PACKAGE_TAIL[2] = {'6', '6'};
 
+std::shared_ptr<DetectorPackage> detector_raw_package_convert(const Package::Payload* pkg) {
+    auto ret = make_shared<DetectorPackage>();
+    auto payload = reinterpret_cast<const Package::Payload*>(pkg);
+
+    //read realtime
+    ret->realtime = be64toh(payload->realtime << 16) * 0.00002;
+    double msTime = 1;
+    if(ret->realtime > 1) msTime = ret->realtime;
+
+    // Spectrum
+    ret->spc = make_shared<HwSpectrum>();
+    for (int i = 0; i < ret->spc->getSize(); i++) {
+        auto count = be16toh(payload->spectrum[i]) / msTime;
+
+        if (count > 15000) {
+            count = 0;
+        } else if (count < 0) {
+            count = 0;
+        }
+
+        (*ret->spc)[i] = count;
+    }
+    ret->spc->update();
+
+    ret->neutron = be16toh(payload->neutron);
+    ret->hasNeutron = payload->neutronGmFlag >> 7;
+    ret->hasGM = payload->neutronGmFlag & 0x40;
+
+    ret->pileup = be16toh(payload->pileup);
+    ret->spc->setFillCps(ret->pileup);
+    ret->detectorInfo = be16toh(payload->detectorCode);
+    ret->hvDac = be16toh(payload->hvDac);
+    ret->gc = be16toh(payload->gc);
+    // GM
+    ret->gm = be16toh(payload->gm);
+
+    ret->temperatureRaw = be16toh(payload->tempOutside);
+//    ret->temperature = (temp * 2.0 / 4096.0 - 0.5) * 100;
+    ret->temperature = (ret->temperatureRaw * 330) / 4096  - 60;
+
+    return ret;
+}
+
 DetectorComponent::DetectorComponent(QObject *parent)
-    : Component("DETECTOR"), m_serialPort(new QSerialPort(this)),
+    : Component("DETECTOR"), m_properties(make_shared<DetectorProperty>()), m_serialPort(new QSerialPort(this)),
       m_retryCount(0), m_commandState(Idle), m_packageBytes(0)
 {
     memset(m_packageBuffer, 0, sizeof(m_packageBuffer));
@@ -76,16 +129,25 @@ DetectorComponent::~DetectorComponent()
     closeSerialPort();
 }
 
-void DetectorComponent::initialize(const QString& portName)
+void DetectorComponent::open(const QString& portName)
 {
     logI() << "Initializing DetectorComponent.";
     int baudRate = 230400; // TODO: Load from settings
 
     if (openSerialPort(portName, baudRate)) {
         logI() << "Serial port" << portName << "opened successfully.";
+        clearSerialBuffer(); // Clear buffer on successful open
     } else {
         logE() << "Failed to open serial port" << portName << ":" << m_serialPort->errorString();
         emit errorOccurred(m_serialPort->errorString());
+    }
+}
+
+void DetectorComponent::clearSerialBuffer()
+{
+    if (m_serialPort->isOpen()) {
+        m_serialPort->clear();
+        logI() << "Serial buffer cleared.";
     }
 }
 
@@ -142,6 +204,63 @@ void DetectorComponent::sendCommand(const QByteArray &command)
     }
 }
 
+void DetectorComponent::initialize()
+{
+    auto db = ComponentManager::instance().databaseManager();
+    if (!db) {
+        NC_THROW_ARG_ERROR("Not found any data");
+    }
+
+    m_properties->setBackgroundSpc(db->getBackgroundById(m_properties->getId()));
+
+    // Initilialize Calibration
+    auto oldCalib = m_properties->getCalibration();
+    auto ret = db->getCalibrationById(m_properties->getId());
+    auto calibConfig = db->getDefaultDetectorConfig(m_properties->getId());
+    if (ret == nullptr) {
+
+        ret = make_shared<Calibration>();
+
+        ret->setDetectorId(m_properties->getId());
+
+        Coeffcients& foundPeaks = calibConfig->calib;
+        if (oldCalib != nullptr) {
+            auto hwCoeff = oldCalib->chCoefficients();
+            if (hwCoeff[0] > 0 && hwCoeff[1] > 0 && hwCoeff[2] > 0) {
+                foundPeaks = hwCoeff;
+                ret->setGC(m_properties->getGC());
+            }
+        }
+
+        ret->setDate(nucare::Timestamp());
+
+        const int size = 3;
+        std::array<double, size> enPeaks = {CS137_PEAK1, CS137_PEAK2, K40_PEAK};
+
+        auto coeff = NcLibrary::computeCalib(foundPeaks, enPeaks);
+        Coeffcients convCoef;
+        auto ratio = NcLibrary::calibConvert(coeff.data(), convCoef.data(), 2048, nucare::CHSIZE);
+        ret->setRatio(ratio);
+        ret->setCoefficients(convCoef);
+
+        ret->setChCoefficients({
+                                   foundPeaks[0] / ratio,
+                                   foundPeaks[1] / ratio,
+                                   foundPeaks[2] / ratio
+                               });
+
+        db->insertCalibration(ret.get());
+    }
+
+    ret->setStdPeaks(calibConfig->calib);
+    if (ret->getGC() == 0) {
+        ret->setGC(m_properties->getGC());
+    }
+
+    m_properties->setCalibration(ret);
+    m_properties->m_initialized = true;
+}
+
 void DetectorComponent::readData()
 {
     m_readBuffer.append(m_serialPort->readAll());
@@ -163,6 +282,23 @@ void DetectorComponent::handleTimeout()
     if (m_retryCount < 3) {
         logI() << "Retrying command:" << m_currentCommand << "(Attempt" << m_retryCount + 1 << "of 3)";
         sendCommand(m_currentCommand); // Retry the command
+    } else if (m_commandState == WaitingForInfoResponse) {
+        logE() << "Failed after three times, load last detector info instead";
+        auto db = ComponentManager::instance().databaseManager();
+        if (!db) {
+            emit errorOccurred("Database is unavailable");
+            return;
+        }
+
+        auto info = db->getLastDetector();
+        if (info) {
+            emit errorOccurred("Not found any detector");
+            return;
+        }
+
+        m_properties->info = *info;
+        initialize();
+
     } else {
         logE() << "Command failed after 3 retries:" << m_currentCommand;
         emit errorOccurred("Command failed after 3 retries.");
@@ -187,10 +323,10 @@ void DetectorComponent::processReceivedData()
             case WaitingForInfoResponse: {
                 int headerIndex = m_readBuffer.indexOf("GD");
                 if (headerIndex < 0) break;
-                if (m_readBuffer.size() < headerIndex + sizeof(Payload)) break;
-                QByteArray payloadData = m_readBuffer.mid(headerIndex, sizeof(Payload));
+                if (m_readBuffer.size() < headerIndex + sizeof(GcPackage::Payload)) break;
+                QByteArray payloadData = m_readBuffer.mid(headerIndex, sizeof(GcPackage::Payload));
                 processDetectorInfo(payloadData);
-                m_readBuffer.remove(0, headerIndex + sizeof(Payload));
+                m_readBuffer.remove(0, headerIndex + sizeof(GcPackage::Payload));
                 m_responseTimer.stop();
                 m_retryCount = 0;
                 sendStartCommand();
@@ -290,20 +426,45 @@ void DetectorComponent::processReceivedData()
 void DetectorComponent::processDetectorInfo(const QByteArray &data)
 {
     // Process the received detector info (28 bytes)
-    if (data.size() == sizeof(Payload)) {
-        const Payload* payload = reinterpret_cast<const Payload*>(data.constData());
+    if (data.size() == sizeof(GcPackage::Payload)) {
+        const GcPackage::Payload* rawPayload = reinterpret_cast<const GcPackage::Payload*>(data.constData());
         // Validate header 'GD' - already done in processReceivedData, but double-check
-        if (payload->header[0] == 'G' && payload->header[1] == 'D') {
+        if (rawPayload->header[0] == 'G' && rawPayload->header[1] == 'D') {
             logI() << "Successfully processed detector info.";
-            // You can access payload members here, e.g., payload->gain, payload->detectorCode
-            // For now, just emit the raw data.
-            emit detectorInfoReceived(data);
+
+            auto gcResponse            = std::make_shared<GcResponse>();
+            gcResponse->gc             = be16toh(rawPayload->gain);
+            gcResponse->k40Ch          = be16toh(rawPayload->k40Ch);
+            gcResponse->k40Ch          = be16toh(rawPayload->k40Ch);
+            gcResponse->detType        = be16toh(rawPayload->detectorCode);
+            gcResponse->cs137Ch1       = be16toh(rawPayload->ch32Kev);
+            gcResponse->cs137Ch2       = be16toh(rawPayload->ch662Kev);
+            gcResponse->hasTemperature = rawPayload->temperatureFlag == 'T';
+            if (gcResponse->hasTemperature) {
+                gcResponse->temperature = rawPayload->temperature;
+            }
+
+            gcResponse->serial = QString::fromLocal8Bit(rawPayload->serial, sizeof(rawPayload->serial));
+
+            m_properties->setSerial(gcResponse->serial);
+            m_properties->setDetectorCode((DetectorCode_E) gcResponse->detType);
+            ComponentManager::instance().databaseManager()->getDetectorByCriteria(
+                        m_properties->getSerial(),
+                        m_properties->info.model,
+                        m_properties->info.probeType,
+                        QString::number(m_properties->info.detectorCode->code),
+                        QString::number(m_properties->info.detectorCode->cType)
+                        );
+
+            initialize();
+
+            emit detectorInfoReceived(this, gcResponse);
         } else {
             logE() << "Detector info validation failed: Incorrect header.";
             emit errorOccurred("Detector info validation failed: Incorrect header.");
         }
     } else {
-        logE() << "Detector info validation failed: Incorrect size (" << data.size() << " bytes, expected" << sizeof(Payload) << ").";
+        logE() << "Detector info validation failed: Incorrect size (" << data.size() << " bytes, expected" << sizeof(GcPackage::Payload) << ").";
         emit errorOccurred("Detector info validation failed: Incorrect size.");
     }
 }
@@ -313,13 +474,13 @@ void DetectorComponent::processPackageData(const QByteArray &data)
 {
     // Process the received package data (4166 bytes)
     if (data.size() == sizeof(Package::Bytes)) {
-        auto package = reinterpret_cast<const Package::Payload*>(data.constData());
+        auto rawPackage = reinterpret_cast<const Package::Payload*>(data.constData());
         // Use constexpr header/tail for fast check
-        bool headerOk = (memcmp(package->header, PACKAGE_HEADER, 4) == 0);
-        bool tailOk = (memcmp(package->tail + 18, PACKAGE_TAIL, 2) == 0);
+        bool headerOk = (memcmp(rawPackage->header, PACKAGE_HEADER, 4) == 0);
+        bool tailOk = (memcmp(rawPackage->tail + 18, PACKAGE_TAIL, 2) == 0);
         if (headerOk && tailOk) {
-            logD() << "Successfully processed package data.";
-            emit packageReceived(data);
+            std::shared_ptr<DetectorPackage> detectorPackage = detector_raw_package_convert(rawPackage);
+            emit packageReceived(this, detectorPackage);
         } else {
             logW() << "Package data validation failed: Incorrect header or tail.";
         }

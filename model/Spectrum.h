@@ -2,11 +2,13 @@
 #define INCLUDE_MODEL_SPECTRUM_H_
 
 #include "config.h"
+#include "util/nc_exception.h"
 
 #include <stddef.h>
 #include <array>
 #include <stdexcept>
-#include <QString>
+#include <math.h>
+#include <QStringList>
 
 template <class Data = float, size_t N = nucare::CHSIZE>
 class Spectrum_t
@@ -19,14 +21,8 @@ class Spectrum_t
     int m_fillCps = 0;
     int m_detID = -1;
 
-    void update() {
-        m_totalCount = m_fillCps;
-        for (const auto& val : m_data) {
-            m_totalCount += val;
-        }
-    }
-
    public:
+    using Channel  = Data;
     using SPC_DATA = Data*;
 
     Spectrum_t() noexcept : m_acqTime(1), m_totalCount(0), m_fillCps(0) {}
@@ -42,7 +38,14 @@ class Spectrum_t
     ~Spectrum_t() = default;
 
    public:
-    size_t getSize() const noexcept { return N; }
+    void update() {
+        m_totalCount = m_fillCps;
+        for (const auto& val : m_data) {
+            m_totalCount += val;
+        }
+    }
+
+    static inline constexpr size_t getSize() { return N; }
 
     void setAcqTime(double acqTime) noexcept { m_acqTime = acqTime; }
 
@@ -124,14 +127,129 @@ class Spectrum_t
     }
 
     QString toString() {
-        QString str;
+        QStringList parts;
+        parts.reserve(N);
         for (size_t i = 0; i < N; ++i) {
-            str += QString("%1").arg(m_data[i]);
-            if (i < N - 1) {
-                str += ",";
+            parts.append(QString::number(m_data[i]));
+        }
+        return parts.join(",");
+    }
+
+    static Spectrum_t* pFromString(const QString& s) {
+        QStringList dataParts = s.split(',');
+        if (dataParts.size() != getSize()) {
+            auto msg = QString::asprintf("Spectrum size %d is not same with %d", getSize(), dataParts.size());
+            NC_THROW_ARG_ERROR(msg);
+        }
+
+        Spectrum_t* ret = new Spectrum_t();
+        for (int i = 0; i < ret->getSize(); i++) {
+            ret->m_data[i] = dataParts[i].toDouble();
+        }
+
+        return ret;
+    }
+
+    template<class O>
+//    using O = Spectrum_t;
+    static void convertSpectrum(Spectrum_t& in, O& out, const double ratio) {
+        if(ratio > 1) {
+            bool First = true;
+            double sum1 = 0, sum2 = 0, z_flt = 0, z_flt_pre = 0, ztmp = 0;
+            int ind_chn = 0;
+
+            int z_int = 0;
+            for (size_t i = 0; i < out.getSize(); i++) {
+                out[i] = 0;
+
+                if (ratio < 1) {
+                    sum1 = sum1 + ratio;
+
+                    if (sum1 > 1) {
+                        ind_chn = ind_chn + 1;
+                        sum2 = sum1 - 1;
+                        out[i] = (ratio - sum2) * in[ind_chn - 1] + sum2 * in[ind_chn];
+                        sum1 = sum2;
+                    } else {
+                        sum2 = ratio;
+                        out[i] = sum2 * in[ind_chn];
+                    }
+
+                } else if (ratio > 1) {
+                    if (First == true) {
+                        First = false;
+                        z_int = (int) floor(ratio);
+                        z_flt = ratio - z_int;
+
+                        if (ind_chn + z_int + 1 > in.getSize() - 1) {
+                            break;
+                        }
+
+                        sum1 = 0;
+                        for (int j = 1; j <= z_int; j++) {
+                            sum1 = sum1 + in[ind_chn + j];
+                        }
+
+                        sum1 = sum1 + z_flt * in[ind_chn + z_int + 1];
+
+                        ind_chn = ind_chn + z_int + 1;
+                        z_flt_pre = 1 - z_flt;
+                    } else {
+                        ztmp = ratio - z_flt_pre;
+
+                        z_int = (int) floor(ztmp);
+
+                        if (z_int >= 1) {
+                            z_flt = ztmp - z_int;
+
+                            if (ind_chn + z_int + 1 > in.getSize() - 1) {
+                                break;
+                            }
+
+                            sum1 = z_flt_pre * in[ind_chn];
+
+                            for (int j = 1; j <= z_int; j++) {
+                                sum1 = sum1 + in[ind_chn + j];
+                            }
+
+                            sum1 = sum1 + z_flt * in[ind_chn + z_int + 1];
+
+                            ind_chn = ind_chn + z_int + 1;
+                            z_flt_pre = 1 - z_flt;
+
+                        } else {
+                            z_flt = ratio - z_flt_pre;
+
+                            if (ind_chn + z_int + 1 > in.getSize() - 1) {
+                                break;
+                            }
+
+                            sum1 = z_flt_pre * in[ind_chn] + z_flt * in[ind_chn + 1];
+                            z_flt_pre = 1 - z_flt;
+                            ind_chn = ind_chn + 1;
+                        }
+                    }
+                    out[i] = sum1;
+                } else if (ratio == 1) {
+                    if (ind_chn < in.getSize()) {
+                        out[i] = in[ind_chn];
+                        ind_chn = ind_chn + 1;
+                    }
+
+                }
             }
         }
-        return str;
+        else
+        {
+            if(out.getSize() < in.getSize())
+            {
+                for (int i = 0; i < out.getSize();i++)
+                {
+                    out[i] = in[i];
+                }
+            }
+
+        }
     }
 };
 

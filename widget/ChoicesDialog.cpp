@@ -47,7 +47,7 @@ ChoicesDialog::ChoicesDialog(const QString& tag, QWidget* parent) : BaseDialog(t
             ui->choiceList->moveUp();
             return true;
         },
-        ":/images/common/menu_up.png");
+        ":/icons/menu_up");
     auto centerAct = new ViewAction(
         "OK",
         [this]() {
@@ -55,14 +55,14 @@ ChoicesDialog::ChoicesDialog(const QString& tag, QWidget* parent) : BaseDialog(t
             onOkClick();
             return true;
         },
-        ":/images/common/menu_ok.png");
+        ":/icons/menu_ok");
     auto rightAct = new ViewAction(
         "DOWN",
         [this]() {
             ui->choiceList->moveDown();
             return true;
         },
-        ":/images/common/menu_down.png");
+        ":/icons/menu_down");
     setLeftAction(leftAct);
     setCenterAction(centerAct);
     setRightAction(rightAct);

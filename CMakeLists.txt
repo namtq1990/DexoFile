@@ -17,8 +17,8 @@ include_directories(component) # Add component directory
 include_directories(page) # Add page directory
 include_directories(${Qt${QT_VERSION_MAJOR}_INCLUDE_DIRS} ${QT_QTCORE_INCLUDE_DIRS})
 
-find_package(QT NAMES Qt6 Qt5 COMPONENTS Widgets Core SerialPort REQUIRED)
-find_package(Qt${QT_VERSION_MAJOR} COMPONENTS Widgets Core SerialPort REQUIRED)
+find_package(QT NAMES Qt6 Qt5 COMPONENTS Widgets Core SerialPort Sql REQUIRED)
+find_package(Qt${QT_VERSION_MAJOR} COMPONENTS Widgets Core SerialPort Sql REQUIRED)
 
 set(PROJECT_SOURCES
         main.cpp
@@ -30,6 +30,13 @@ set(PROJECT_SOURCES
         thememanager.cpp
         thememanager.h
         util/util.h
+        util/util.cpp
+        util/nc_exception.h
+        util/nc_exception.cpp
+        util/NcLibrary.h
+        util/NcLibrary.cpp
+        util/PeakSearch.h
+        util/PeakSearch.cpp
         config.h
         base/baseview.h
         base/baseview.cpp
@@ -68,14 +75,35 @@ set(PROJECT_SOURCES
         component/inputcomponent.cpp
         component/detectorcomponent.h
         component/detectorcomponent.cpp
+        component/databasemanager.h
+        component/databasemanager.cpp
         component/settingmanager.h
         component/settingmanager.cpp
+        component/ncmanager.h
+        component/ncmanager.cpp
+        model/Background.h
         model/basesettingitem.h
         model/basesettingitem.cpp
+        model/Calibration.h
+        model/Calibration.cpp
+        model/DetectorCode.h
+        model/DetectorCode.cpp
+        model/DetectorInfo.h
+        model/DetectorProp.cpp
+        model/DetectorProp.h
+        model/DetectorCalibConfig.h
+        model/Event.h
+        model/Event.cpp
+        model/Matrix.h
+        model/Matrix.cpp
         model/settingmodel.h
         model/settingmodel.cpp
+        model/DetectorModels.h
         model/Types.h
+        model/Time.h
         model/Spectrum.h
+        model/DetectorProp.h
+        model/DetectorProp.cpp
         page/homepage.h
         page/homepage.cpp
         page/homepage.ui
@@ -113,7 +141,7 @@ else()
     endif()
 endif()
 
-target_link_libraries(NDT PRIVATE Qt${QT_VERSION_MAJOR}::Widgets Qt${QT_VERSION_MAJOR}::Core Qt${QT_VERSION_MAJOR}::SerialPort wpa_client)
+target_link_libraries(NDT PRIVATE Qt${QT_VERSION_MAJOR}::Widgets Qt${QT_VERSION_MAJOR}::Core Qt${QT_VERSION_MAJOR}::SerialPort Qt${QT_VERSION_MAJOR}::Sql wpa_client)
 
 set_target_properties(NDT PROPERTIES
     MACOSX_BUNDLE_GUI_IDENTIFIER my.example.com
@@ -128,3 +156,4 @@ if(QT_VERSION_MAJOR EQUAL 6)
 endif()
 
 install(TARGETS NDT RUNTIME DESTINATION /usr/bin)
+install(FILES res/NDT.db DESTINATION ${CMAKE_INSTALL_PREFIX}/share/NDT)

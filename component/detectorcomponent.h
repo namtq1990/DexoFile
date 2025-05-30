@@ -2,31 +2,42 @@
 #define DETECTORCOMPONENT_H
 
 #include "component/component.h"
+#include "model/Spectrum.h" // Include Spectrum_t definition
+#include "model/DetectorModels.h" // Include DetectorModels.h for GcResponse and DetectorPackage
 #include <QSerialPort>
 #include <QByteArray>
 #include <QTimer>
+#include <memory> // For std::shared_ptr
 
 namespace nucare {
+
+class DetectorProperty;
 
 class DetectorComponent : public QObject, public Component
 {
     Q_OBJECT
+private:
+    std::shared_ptr<DetectorProperty> m_properties;
 public:
     explicit DetectorComponent(QObject *parent = nullptr);
     ~DetectorComponent();
 
-    void initialize(const QString &portName);
+    void open(const QString &portName);
     void start();
     void stop();
+    auto properties() const { return m_properties; }
 
     bool openSerialPort(const QString &portName, int baudRate);
     void closeSerialPort();
+    void clearSerialBuffer();
 
     void sendCommand(const QByteArray &command);
 
+    void initialize();
+
 signals:
-    void detectorInfoReceived(const QByteArray &info);
-    void packageReceived(const QByteArray &packageData);
+    void detectorInfoReceived(DetectorComponent* dev, std::shared_ptr<GcResponse> info);
+    void packageReceived(DetectorComponent* dev, std::shared_ptr<DetectorPackage> packageData);
     void errorOccurred(const QString &errorMessage);
 
 private slots:
@@ -65,6 +76,7 @@ private:
     void sendStopCommand();
     void sendGetInfoCommand();
     void sendStartCommand();
+
 };
 
 } // namespace nucare

@@ -35,9 +35,3 @@ void MainWindow::onCreate(navigation::NavigationArgs *args) {
     BaseWindow::onCreate(args);
     navigation::toHome(getChildNavigation(), new NavigationEntry(CHILD_IN_WINDOW, nullptr, nullptr, ui->mainStackedWidget));
 }
-
-void MainWindow::showEvent(QShowEvent *e)
-{
-    BaseWindow::showEvent(e);
-    nucare::logD() << "NamTQ " << ui->contentWrapperWidget->size() << " " << ui->menuWidget->size() << ui->statusBarWidget->size();
-}
