@@ -1,6 +1,7 @@
 #ifndef DETECTORPROPERTY_H
 #define DETECTORPROPERTY_H
 
+#include <memory> // Added for std::shared_ptr
 #include "Types.h"
 #include "Calibration.h"
 #include "Background.h"
@@ -43,7 +44,7 @@ private:
     std::vector<std::shared_ptr<Isotopes>> mIsotopes;
     std::shared_ptr<Background> mBackground;
     std::shared_ptr<Spectrum> mSpc;
-    std::shared_ptr<Spectrum> mOriginSpc;
+    std::shared_ptr<HwSpectrum> mOriginSpc;
     double mCPS = 0;
     double mCPS0 = 0;
     double mDoserate = 0;

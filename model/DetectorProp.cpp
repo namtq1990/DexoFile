@@ -9,7 +9,7 @@ const int GC = 27000;
 const std::array<double, 8> DetectorProperty::InterCoeff = { -0.0000000001, 0.0000005531, -0.0008610261, 0.5684236932,
             -53.5185548731, 0.0002779219, -0.0100275772, 5.8129370431 };
 
-DetectorProperty::DetectorProperty() : mCalib()
+DetectorProperty::DetectorProperty() : mCalib(), mOriginSpc(nullptr)
 {
 //    mCalib.coefficients = { -0.0005103568925150289, 3.443973937583906, 8.518676839918477};
     mGeCoeffcients = {-0.009219166, 0.025628772, -0.027106762, 0.014082004, -0.003681875, 0.000398323};
