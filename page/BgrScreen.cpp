@@ -5,31 +5,54 @@
  *      Author: quangnam
  */
 
-#include "Feature/Background/BgrScreen.h"
+#include "page/BgrScreen.h"
 #include "config.h"
-#include "Nucare/NcManager.h"
-#include "Base/BaseDialog.h"
-#include "Base/ResourceManager.h"
-#include "Base/Navigation.h"
+#include "base/basedialog.h"
+#include "component/componentmanager.h"
+#include "component/detectorcomponent.h"
+#include "component/navigationcomponent.h"
+#include "model/DetectorProp.h"
 #include "ui_BgrScreen.h"
 
-#include <QPushButton>
+#include <QDialog>
 
-BackgroundScreen::BackgroundScreen(const std::string &tag, QWidget *parent)
-    : QWidget(parent),
-    BaseScreen(std::move(tag)),
+void navigation::toBackground(NavigationComponent* navController, NavigationEntry* entry, const QString& tag) {
+    if (auto w = dynamic_cast<QWidget*>(entry->host)) {
+        entry->view = new BackgroundScreen(tag, w);
+        entry->type = CHILD_IN_WINDOW;
+        entry->childNav = new NavigationComponent(navController);
+        navController->enter(entry);
+    }
+}
+
+navigation::NavigationEntry* navigation::toBackground(BaseView* parent) {
+    auto nav = parent->getNavigation();
+    auto widget = dynamic_cast<QWidget*>(parent);
+    auto ret = new NavigationEntry(CHILD_IN_WINDOW,
+                                   new BackgroundScreen(tag::BACKGROUND_TAG, widget),
+                                   new NavigationComponent(nav),
+                                   widget->parent());
+    nav->enter(ret);
+
+    return ret;
+}
+
+BackgroundScreen::BackgroundScreen(const QString &tag, QWidget *parent)
+    : BaseScreen(tag, parent),
     ui(new Ui::BackgroundScreen())
 {
     ui->setupUi(this);
-    auto centerAct = new ViewAction {
-        .name = translate("TIME"),
-        .action = [this]() {
-            getPresenter<BackgroundPresenter>()->toAcqDialog(getChildNavigation(), this);
-            return true;
-        },
-        .icon = ":/images/common/menu_acq_time.png"
-    };
-    setCenterAction(centerAct);
+//    auto centerAct = new ViewAction {
+//        .name = translate("TIME"),
+//        .action = [this]() {
+//            getPresenter<BackgroundPresenter>()->toAcqDialog(getChildNavigation(), this);
+//            return true;
+//        },
+//        .icon = ":/images/common/menu_acq_time.png"
+//    };
+//    setCenterAction(centerAct);
+
+    setupLayout();
 }
 
 BackgroundScreen::~BackgroundScreen()
@@ -38,78 +61,39 @@ BackgroundScreen::~BackgroundScreen()
 }
 
 void BackgroundScreen::setupLayout() {
-    if (auto detector = sdi::getComponent<nucare::NcManager>()->getCurDetector()) {
-        ui->chart->setCoefficient(&detector->mProp->getCoeffcients());
+    if (auto detector = ComponentManager::instance().detectorComponent()) {
+        ui->chart->setCoefficient(const_cast<Coeffcients*>(&detector->properties()->getCoeffcients()));
     }
-
-    auto res = getResouce();
-    auto theme = res->themeMgr()->getTheme();
-    ui->chart->setFont(theme->small());
-
-#ifdef PLATFORM_EMBEDDED
-    QFont font = theme->normal();
-#elif defined PLATFORM_DESKTOP
-    QFont font = theme->large();
-#endif
-    ui->cps->setFont(font);
-    ui->tvCps->setFont(font);
-    ui->tvCount->setFont(font);
-    ui->count->setFont(font);
-    ui->acqTime->setFont(font);
-    ui->acqSec->setFont(font);
-    ui->acqCounter->setFont(font);
 }
 
-void BackgroundScreen::createPresenter(app_nav::NavigationArgs *)
+void BackgroundScreen::reloadLocal()
 {
-    mPresenter = new BackgroundPresenter();
+    ui->retranslateUi(this);
 }
 
-void BackgroundScreen::onCreate(app_nav::NavigationArgs *entry) {
-    BaseScreen::onCreate(entry);
-    setupLayout();
-}
-
-void BackgroundScreen::bindData(app::uc::meter::model::Data &data)
-{
-    ui->acqCounter->setText(QString("%1 / %2")
-                             .arg(data.acqTime, 2, 10, QChar('0'))
-                             .arg(data.goalTime));
-    ui->count->setText(QString("%1K").arg(data.spc->getTotalCount() / 1000, 3, 'f', 1));
-    ui->cps->setText(QString::number((int) data.cps));
-    ui->chart->setData(data.spc);
-}
-
-void BackgroundScreen::onHandleAlarm(Alarm &alarm)
-{
-    alarm.sound = nullptr;
-    alarm.vibration = false;
-}
+//void BackgroundScreen::bindData(app::uc::meter::model::Data &data)
+//{
+//    ui->acqCounter->setText(QString("%1 / %2")
+//                             .arg(data.acqTime, 2, 10, QChar('0'))
+//                             .arg(data.goalTime));
+//    ui->count->setText(QString("%1K").arg(data.spc->getTotalCount() / 1000, 3, 'f', 1));
+//    ui->cps->setText(QString::number((int) data.cps));
+//    ui->chart->setData(data.spc);
+//}
 
 void BackgroundScreen::showConfirmDlg()
 {
-    auto view = new BaseDialog(app_const::WARNING_DLG_TAG, this);
-    auto entry = new app_nav::NavigationEntry();
-    entry->setHost(this);
-    entry->view = view;
-    app_nav::showWarning(getNavigation(), entry, "BGR_Saved");
-
-
+    auto entry = BaseScreen::showInfo("Background Saved.");
     auto action = [&]() { getNavigation()->pop(this, false); };
-    connect(view, &QDialog::accepted, this, action);
-    connect(view, &QDialog::rejected, this, action);
+
+    connect(dynamic_cast<QDialog*>(entry->view), &QDialog::accepted, this, action);
+    connect(dynamic_cast<QDialog*>(entry->view), &QDialog::rejected, this, action);
 }
 
 void BackgroundScreen::showGammaWarning()
 {
-    auto view = new BaseDialog(app_const::WARNING_DLG_TAG, this);
-    auto entry = new app_nav::NavigationEntry();
-    entry->setHost(this);
-    entry->view = view;
-    app_nav::showWarning(getNavigation(), entry, "BGR_Gamma_Warning");
-    auto action = [&]() { getNavigation()->pop(this, false); };
-    connect(view, &QDialog::accepted, this, action);
-    connect(view, &QDialog::rejected, this, action);
+//    auto entry = ""
+//    auto action = [&]() { getNavigation()->pop(this, false); };
+//    connect(view, &QDialog::accepted, this, action);
+//    connect(view, &QDialog::rejected, this, action);
 }
-
-TRANSLATION(BackgroundScreen, ui)

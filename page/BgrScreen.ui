@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>480</width>
+    <width>534</width>
     <height>640</height>
    </rect>
   </property>
@@ -41,12 +41,14 @@
       </sizepolicy>
      </property>
      <property name="font">
-      <font/>
+      <font>
+       <pointsize>4</pointsize>
+      </font>
      </property>
     </widget>
    </item>
    <item row="0" column="1">
-    <widget class="SolidView" name="hline1" native="true">
+    <widget class="Line" name="hline1">
      <property name="sizePolicy">
       <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
        <horstretch>0</horstretch>
@@ -65,10 +67,13 @@
        <height>16777215</height>
       </size>
      </property>
+     <property name="orientation">
+      <enum>Qt::Vertical</enum>
+     </property>
     </widget>
    </item>
    <item row="3" column="0" colspan="3">
-    <widget class="SolidView" name="vline2" native="true">
+    <widget class="Line" name="vline2">
      <property name="sizePolicy">
       <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
        <horstretch>0</horstretch>
@@ -87,6 +92,9 @@
        <height>2</height>
       </size>
      </property>
+     <property name="orientation">
+      <enum>Qt::Horizontal</enum>
+     </property>
     </widget>
    </item>
    <item row="4" column="0" colspan="3">
@@ -102,13 +110,6 @@
      </property>
      <item>
       <widget class="QLabel" name="acqTime">
-       <property name="font">
-        <font>
-         <pointsize>30</pointsize>
-         <weight>75</weight>
-         <bold>true</bold>
-        </font>
-       </property>
        <property name="styleSheet">
         <string notr="true">color: rgb(78, 154, 6);</string>
        </property>
@@ -128,11 +129,6 @@
          <verstretch>0</verstretch>
         </sizepolicy>
        </property>
-       <property name="font">
-        <font>
-         <pointsize>35</pointsize>
-        </font>
-       </property>
        <property name="styleSheet">
         <string notr="true">color: rgb(252, 233, 79);</string>
        </property>
@@ -146,13 +142,6 @@
      </item>
      <item>
       <widget class="QLabel" name="acqSec">
-       <property name="font">
-        <font>
-         <pointsize>30</pointsize>
-         <weight>75</weight>
-         <bold>true</bold>
-        </font>
-       </property>
        <property name="styleSheet">
         <string notr="true">color: rgb(78, 154, 6);</string>
        </property>
@@ -176,13 +165,6 @@
      </property>
      <item>
       <widget class="QLabel" name="tvCps">
-       <property name="font">
-        <font>
-         <pointsize>20</pointsize>
-         <weight>75</weight>
-         <bold>true</bold>
-        </font>
-       </property>
        <property name="styleSheet">
         <string notr="true">color: rgb(78, 154, 6);</string>
        </property>
@@ -193,11 +175,6 @@
      </item>
      <item>
       <widget class="QLabel" name="cps">
-       <property name="font">
-        <font>
-         <pointsize>25</pointsize>
-        </font>
-       </property>
        <property name="styleSheet">
         <string notr="true">color: rgb(252, 233, 79);</string>
        </property>
@@ -212,7 +189,7 @@
     </layout>
    </item>
    <item row="1" column="0" colspan="3">
-    <widget class="SolidView" name="vline1" native="true">
+    <widget class="Line" name="vline1">
      <property name="sizePolicy">
       <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
        <horstretch>0</horstretch>
@@ -231,6 +208,9 @@
        <height>2</height>
       </size>
      </property>
+     <property name="orientation">
+      <enum>Qt::Horizontal</enum>
+     </property>
     </widget>
    </item>
    <item row="0" column="2">
@@ -243,13 +223,6 @@
      </property>
      <item>
       <widget class="QLabel" name="tvCount">
-       <property name="font">
-        <font>
-         <pointsize>20</pointsize>
-         <weight>75</weight>
-         <bold>true</bold>
-        </font>
-       </property>
        <property name="styleSheet">
         <string notr="true">color: rgb(78, 154, 6);</string>
        </property>
@@ -260,11 +233,6 @@
      </item>
      <item>
       <widget class="QLabel" name="count">
-       <property name="font">
-        <font>
-         <pointsize>25</pointsize>
-        </font>
-       </property>
        <property name="styleSheet">
         <string notr="true">color: rgb(252, 233, 79);</string>
        </property>
@@ -282,15 +250,9 @@
  </widget>
  <customwidgets>
   <customwidget>
-   <class>SolidView</class>
-   <extends>QWidget</extends>
-   <header>Common/Widget/SolidView.h</header>
-   <container>1</container>
-  </customwidget>
-  <customwidget>
    <class>SpectrumView</class>
    <extends>QWidget</extends>
-   <header>Common/Widget/SpectrumView.h</header>
+   <header>widget/SpectrumView.h</header>
    <container>1</container>
   </customwidget>
  </customwidgets>

@@ -111,6 +111,9 @@ set(PROJECT_SOURCES
         page/homepage.ui
         page/settingscreen.h
         page/settingscreen.cpp
+        page/BgrScreen.ui
+        page/BgrScreen.h
+        page/BgrScreen.cpp
         controller/wifi_service.h
         controller/wifi_service.cpp
         controller/platform_controller.h

@@ -173,11 +173,18 @@ void toMainWindow(NavigationComponent* navController, const QString& tag = tag::
 void toHome(NavigationComponent* navController, NavigationEntry* entry, const QString& tag = tag::HOME_TAG);
 void toSetting(NavigationComponent* navController, NavigationEntry* entry, SubSettingItem* args,
                const QString& tag = tag::SETTING_TAG);
+void toBackground(NavigationComponent* navController, NavigationEntry* entry, const QString& tag = tag::SETTING_TAG);
+void toCalibration(NavigationComponent* navController, NavigationEntry* entry, const QString& tag = tag::CALIBRATION_TAG);
+void toSpectrumView(NavigationComponent* navController, NavigationEntry* entry, const QString& tag = tag::SPECTRUMVIEW_TAG);
 void toChoiceDlg(NavigationComponent* navController,
                  NavigationEntry* entry,
                  ChoicesDialogArgs* args,
                  const QString& tag = tag::CHOICE_TAG);
+
 NavigationEntry* toChoiceDlg(BaseView* parent, ChoicesDialogArgs* args);
+NavigationEntry* toBackground(BaseView* parent);
+NavigationEntry* toCalibration(BaseView* parent);
+NavigationEntry* toSpectrumView(BaseView* parent);
 
 void showWarning(NavigationComponent* navController,
                  NavigationEntry* entry,

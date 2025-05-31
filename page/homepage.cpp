@@ -51,7 +51,10 @@ HomePage::HomePage(QWidget* parent) : BaseScreen(tag::HOME_TAG, parent), ui(new 
             return true;
         },
         nullptr));
-    setLongLeftAction(new ViewAction("Spectrum"));
+    setLongLeftAction(new ViewAction("Spectrum", [this]() {
+        navigation::toBackground(this);
+        return true;
+    }));
 }
 
 HomePage::~HomePage() { delete ui; }

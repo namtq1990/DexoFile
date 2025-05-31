@@ -39,6 +39,9 @@ constexpr const char* SUCCESS_DLG = "SuccessDlg";
 constexpr const char* WINDOW_TAG  = "MainWindow";
 constexpr const char* HOME_TAG    = "HomeScreen";
 constexpr const char* SETTING_TAG = "SettingScreen";
+constexpr const char* BACKGROUND_TAG = "BackgroundScreen";
+constexpr const char* SPECTRUMVIEW_TAG = "SpectrumScreen";
+constexpr const char* CALIBRATION_TAG = "CalibrationScreen";
 constexpr const char* CHOICE_TAG  = "ChoiceDlg";
 }  // namespace tag
 
