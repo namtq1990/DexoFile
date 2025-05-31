@@ -17,8 +17,9 @@ enum class ActiveSpectrumType {
 // AccumulatorState enum remains the same (simplified version)
 enum class AccumulatorState {
     Idle,
-    Waiting,
-    Measuring
+    Waiting,    // Configured, ready to start (manual/continuous trigger)
+    Measuring,
+    Completed   // Cycle finished, final result emitted, before transitioning to Idle or Waiting (continuous)
 };
 
 struct AccumulationResult {
@@ -28,11 +29,12 @@ struct AccumulationResult {
 
     QDateTime startTime;
     QDateTime finishTime;
-    double totalCPS;
+    double cps;
     double executionRealtimeSeconds;
+    uint count;
 
     // Constructor to initialize type and clear pointers
-    AccumulationResult() : activeType(ActiveSpectrumType::None), spectrum(nullptr), hwSpectrum(nullptr) {}
+    AccumulationResult() : activeType(ActiveSpectrumType::None), spectrum(nullptr), hwSpectrum(nullptr), count(0) {}
 };
 
 #endif // ACCUMULATIONDATATYPES_H

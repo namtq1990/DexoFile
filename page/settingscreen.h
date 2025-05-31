@@ -41,6 +41,7 @@ private:
 private slots:
  void openSubSetting(BaseSettingItem* item);
  void openChoice(BaseSettingItem* item);
+ void openBackground(BaseSettingItem* item);
  void openSwVersion(BaseSettingItem* item);
  void handleSoundSetting(BaseSettingItem* item);
  void handleWifiSetting(BaseSettingItem* item);

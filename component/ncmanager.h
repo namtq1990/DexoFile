@@ -4,6 +4,7 @@
 #include "component/component.h"
 #include "model/Spectrum.h" // Assuming Spectrum_t is the data type from Detector
 #include "model/DetectorModels.h"
+#include "model/Calibration.h"
 #include "model/Types.h"
 
 namespace nucare { class DetectorComponent; }
@@ -18,6 +19,11 @@ public:
     ~NcManager() override;
 
     void updateCalibFromRawPeak(Calibration *calib, const Coeffcients &foundPeaks);
+    void computeCalibration(nucare::DetectorComponent* dev,
+                                std::shared_ptr<Spectrum> spc,
+                                std::shared_ptr<HwSpectrum> hwSpc,
+                                Calibration::Mode mode = Calibration::HH300_CS_137,
+                                bool updateStdPeaks = false);
 
 public slots:
     void onRecvPackage(nucare::DetectorComponent* dev, std::shared_ptr<DetectorPackage> pkg);

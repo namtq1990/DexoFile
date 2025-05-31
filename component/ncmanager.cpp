@@ -50,6 +50,11 @@ void NcManager::updateCalibFromRawPeak(Calibration *calib, const Coeffcients &fo
     calib->setDate(nucare::Timestamp());
 }
 
+void NcManager::computeCalibration(nucare::DetectorComponent *dev, std::shared_ptr<Spectrum> spc, std::shared_ptr<HwSpectrum> hwSpc, Calibration::Mode mode, bool updateStdPeaks)
+{
+
+}
+
 void NcManager::onRecvGC(nucare::DetectorComponent* dev, std::shared_ptr<GcResponse> message) {
     logD() << "Received gc " << message->serial << ':' << message->gc << "," << message->detType;
     std::shared_ptr<Calibration> calib = dev->properties()->getCalibration();
@@ -76,6 +81,7 @@ void NcManager::onRecvPackage(nucare::DetectorComponent* dev, std::shared_ptr<De
     if (!prop || !prop->isInitialized()) return;
 
     shared_ptr<Spectrum> spc = make_shared<Spectrum>();
+    prop->mOriginSpc = pkg->spc;
 
     if (pkg->spc->getSize() != Spectrum::getSize()) {
         auto ratio = prop->getCalibration()->getRatio();

@@ -11,6 +11,7 @@
 #include "component/componentmanager.h"
 #include "component/detectorcomponent.h"
 #include "component/navigationcomponent.h"
+#include "component/SpectrumAccumulator.h"
 #include "model/DetectorProp.h"
 #include "ui_BgrScreen.h"
 
@@ -39,7 +40,8 @@ navigation::NavigationEntry* navigation::toBackground(BaseView* parent) {
 
 BackgroundScreen::BackgroundScreen(const QString &tag, QWidget *parent)
     : BaseScreen(tag, parent),
-    ui(new Ui::BackgroundScreen())
+    ui(new Ui::BackgroundScreen()),
+    m_counter(nullptr)
 {
     ui->setupUi(this);
 //    auto centerAct = new ViewAction {
@@ -63,6 +65,20 @@ BackgroundScreen::~BackgroundScreen()
 void BackgroundScreen::setupLayout() {
     if (auto detector = ComponentManager::instance().detectorComponent()) {
         ui->chart->setCoefficient(const_cast<Coeffcients*>(&detector->properties()->getCoeffcients()));
+    }
+}
+
+void BackgroundScreen::onCreate(navigation::NavigationArgs *args)
+{
+    if (!m_counter) {
+        auto builder = SpectrumAccumulator::Builder()
+                .setParent(this)
+                .setTimeoutSeconds(120)
+                .setMode(SpectrumAccumulator::AccumulationMode::ByTime);
+        m_counter = builder.build();
+        connect(m_counter, &SpectrumAccumulator::accumulationUpdated, this, &BackgroundScreen::onRecvSpectrum);
+        connect(m_counter, &SpectrumAccumulator::stateChanged, this, &BackgroundScreen::onRecvBacground);
+        m_counter->start();
     }
 }
 
@@ -95,5 +111,28 @@ void BackgroundScreen::showGammaWarning()
 //    auto entry = ""
 //    auto action = [&]() { getNavigation()->pop(this, false); };
 //    connect(view, &QDialog::accepted, this, action);
-//    connect(view, &QDialog::rejected, this, action);
+    //    connect(view, &QDialog::rejected, this, action);
+}
+
+void BackgroundScreen::onRecvSpectrum()
+{
+    if (!m_counter) return;
+    if (m_counter->getCurrentState() == AccumulatorState::Measuring) {
+        auto& ret = m_counter->getCurrentAccumulationResult();
+        ui->acqCounter->setText(QString("%1 / %2")
+                                .arg(ret.count, 2, 10, QChar('0'))
+                                .arg(m_counter->getAcqTime()));
+        ui->count->setText(QString("%1K").arg(ret.spectrum->getTotalCount() / 1000, 3, 'f', 1));
+        ui->cps->setText(QString::number((int) ret.cps));
+        ui->chart->setData(ret.spectrum);
+    }
+}
+
+void BackgroundScreen::onRecvBacground()
+{
+    if (!m_counter || m_counter->getCurrentState() != AccumulatorState::Completed) {
+        return;
+    }
+
+    nucare::logD() << "Background Saved." << m_counter->getCurrentAccumulationResult().cps;
 }
