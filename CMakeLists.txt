@@ -83,6 +83,8 @@ set(PROJECT_SOURCES
         component/settingmanager.cpp
         component/ncmanager.h
         component/ncmanager.cpp
+        component/SpectrumAccumulator.cpp
+        component/SpectrumAccumulator.h
         model/Background.h
         model/basesettingitem.h
         model/basesettingitem.cpp
