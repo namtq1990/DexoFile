@@ -87,10 +87,11 @@ public slots:
 
 signals:
     void stateChanged(AccumulatorState newState); // Uses AccumulatorState from AccumulationDataTypes.h
-    void accumulationComplete(const AccumulationResult& result); // Uses AccumulationResult from AccumulationDataTypes.h
+    void accumulationUpdated(const AccumulationResult& currentSnapshot); // ADD THIS NEW SIGNAL
+    void accumulationComplete(const AccumulationResult& finalResult);   // Existing signal
 
 private slots:
-    void onNcManagerSpectrumReceived(std::shared_ptr<Spectrum> spcFromSignal); // ADD THIS LINE
+    void onNcManagerSpectrumReceived(std::shared_ptr<Spectrum> spcFromSignal);
     void onAccumulationTimeout();
     void onContinuousIntervalTimeout();
 

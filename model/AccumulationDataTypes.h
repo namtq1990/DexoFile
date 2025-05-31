@@ -17,8 +17,9 @@ enum class ActiveSpectrumType {
 // AccumulatorState enum remains the same (simplified version)
 enum class AccumulatorState {
     Idle,
-    Waiting,
-    Measuring
+    Waiting,    // Configured, ready to start (manual/continuous trigger)
+    Measuring,
+    Completed   // Cycle finished, final result emitted, before transitioning to Idle or Waiting (continuous)
 };
 
 struct AccumulationResult {
