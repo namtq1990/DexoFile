@@ -1,7 +1,7 @@
 #include "SpectrumAccumulator.h"
 #include "component/componentmanager.h" // For DetectorComponent, NcManager
 #include "component/ncmanager.h"        // For NcManager signals
-#include "model/DetectorProp.h"       // For dev->properties()->getActualOriginHwSpectrum()
+#include "model/DetectorProp.h"       // For dev->properties()->getOriginSpc()
 #include "model/Spectrum.h"           // For Spectrum_t and Spectrum aliases (includes HwSpectrum)
 #include "util/util.h"                // For nucare::logX
 #include "util/nc_exception.h"        // For NC_THROW_X
@@ -17,14 +17,18 @@ SpectrumAccumulator::SpectrumAccumulator(const Builder& builder, QObject* parent
       m_accumulationTimer(new QTimer(this)) {
 
     if (m_mode == AccumulationMode::ByTime || m_mode == AccumulationMode::ContinuousByTime) {
-        m_accumulatedSpectrumVariant = std::make_shared<Spectrum>();
+        m_activeAccumulationType = ActiveSpectrumType::TypeSpectrum;
+        m_accumulatedSpectrum_Spectrum = std::make_shared<Spectrum>();
+        m_accumulatedSpectrum_HwSpectrum = nullptr;
     } else if (m_mode == AccumulationMode::ByCount || m_mode == AccumulationMode::ContinuousByCount) {
-        m_accumulatedSpectrumVariant = std::make_shared<HwSpectrum>();
+        m_activeAccumulationType = ActiveSpectrumType::TypeHwSpectrum;
+        m_accumulatedSpectrum_HwSpectrum = std::make_shared<HwSpectrum>();
+        m_accumulatedSpectrum_Spectrum = nullptr;
     } else {
-        m_accumulatedSpectrumVariant = std::make_shared<Spectrum>();
-        if (m_mode != AccumulationMode::NotSet) {
-             nucare::logW() << "SpectrumAccumulator: Constructor: Mode is not NotSet but not a recognized accumulation mode. Defaulting variant to Spectrum. Mode:" << static_cast<int>(m_mode);
-        }
+        m_activeAccumulationType = ActiveSpectrumType::None;
+        m_accumulatedSpectrum_Spectrum = nullptr;
+        m_accumulatedSpectrum_HwSpectrum = nullptr;
+        nucare::logE() << "SpectrumAccumulator: Mode not set at construction or invalid mode! Mode:" << static_cast<int>(m_mode);
     }
 
     connect(m_accumulationTimer, &QTimer::timeout, this, &SpectrumAccumulator::onAccumulationTimeout);
@@ -35,10 +39,9 @@ SpectrumAccumulator::SpectrumAccumulator(const Builder& builder, QObject* parent
         connect(ncMgr, &NcManager::spectrumReceived, this, &SpectrumAccumulator::onNcManagerSpectrumReceived);
     } else {
         nucare::logE() << "SpectrumAccumulator: NcManager instance is null. SpectrumAccumulator will not receive spectrum data.";
-        // Depending on critical nature, could throw:
         // NC_THROW_FATAL("NcManager instance is null, SpectrumAccumulator cannot operate.");
     }
-    nucare::logI() << "SpectrumAccumulator: Instance created. Mode: " << static_cast<int>(m_mode);
+    nucare::logI() << "SpectrumAccumulator: Instance created. Mode: " << static_cast<int>(m_mode) << ", ActiveType: " << static_cast<int>(m_activeAccumulationType);
 }
 
 SpectrumAccumulator::~SpectrumAccumulator() {
@@ -57,8 +60,8 @@ void SpectrumAccumulator::transitionToState(AccumulatorState newState) {
 
 void SpectrumAccumulator::start() {
     nucare::logI() << "SpectrumAccumulator: Start requested. Current state: " << static_cast<int>(m_currentState);
-    if (m_mode == AccumulationMode::NotSet) {
-        nucare::logW() << "SpectrumAccumulator: Mode not set. Configure via Builder first.";
+    if (m_mode == AccumulationMode::NotSet || m_activeAccumulationType == ActiveSpectrumType::None) {
+        nucare::logW() << "SpectrumAccumulator: Mode not set or active spectrum type is None. Configure via Builder first. Mode:" << static_cast<int>(m_mode) << ", ActiveType: " << static_cast<int>(m_activeAccumulationType);
         return;
     }
 
@@ -89,23 +92,17 @@ void SpectrumAccumulator::stop() {
 }
 
 void SpectrumAccumulator::internalStartAccumulation() {
-    nucare::logI() << "SpectrumAccumulator: Internal accumulation starting. Mode: " << static_cast<int>(m_mode);
+    nucare::logI() << "SpectrumAccumulator: Internal accumulation starting. Mode: " << static_cast<int>(m_mode) << ", ActiveType: " << static_cast<int>(m_activeAccumulationType);
     m_startTime = QDateTime::currentDateTime();
 
-    if (std::holds_alternative<std::shared_ptr<Spectrum>>(m_accumulatedSpectrumVariant)) {
-        std::get<std::shared_ptr<Spectrum>>(m_accumulatedSpectrumVariant) = std::make_shared<Spectrum>();
-    } else if (std::holds_alternative<std::shared_ptr<HwSpectrum>>(m_accumulatedSpectrumVariant)) {
-        std::get<std::shared_ptr<HwSpectrum>>(m_accumulatedSpectrumVariant) = std::make_shared<HwSpectrum>();
+    if (m_activeAccumulationType == ActiveSpectrumType::TypeSpectrum) {
+        m_accumulatedSpectrum_Spectrum = std::make_shared<Spectrum>();
+    } else if (m_activeAccumulationType == ActiveSpectrumType::TypeHwSpectrum) {
+        m_accumulatedSpectrum_HwSpectrum = std::make_shared<HwSpectrum>();
     } else {
-        nucare::logE() << "SpectrumAccumulator: m_accumulatedSpectrumVariant is not holding a known type at start.";
-        if (m_mode == AccumulationMode::ByTime || m_mode == AccumulationMode::ContinuousByTime) {
-            m_accumulatedSpectrumVariant = std::make_shared<Spectrum>();
-        } else if (m_mode == AccumulationMode::ByCount || m_mode == AccumulationMode::ContinuousByCount) {
-            m_accumulatedSpectrumVariant = std::make_shared<HwSpectrum>();
-        } else {
-            transitionToState(AccumulatorState::Idle);
-            return;
-        }
+        nucare::logE() << "SpectrumAccumulator: Cannot start, active spectrum type is None or invalid for mode " << static_cast<int>(m_mode);
+        transitionToState(AccumulatorState::Idle);
+        return;
     }
     transitionToState(AccumulatorState::Measuring);
 
@@ -138,15 +135,21 @@ void SpectrumAccumulator::internalStopAccumulation(bool conditionMet) {
     nucare::logI() << "SpectrumAccumulator: Internal accumulation stopped. Condition met: " << conditionMet;
 
     AccumulationResult result;
-    result.accumulatedSpectrumVariant = m_accumulatedSpectrumVariant;
+    result.activeType = m_activeAccumulationType;
     result.startTime = m_startTime;
     result.finishTime = m_finishTime;
     result.executionRealtimeSeconds = static_cast<double>(m_startTime.msecsTo(m_finishTime)) / 1000.0;
 
     double totalCount = 0;
-    std::visit([&totalCount](auto&& arg) {
-        if(arg) totalCount = static_cast<double>(arg->getTotalCount());
-    }, m_accumulatedSpectrumVariant);
+    if (m_activeAccumulationType == ActiveSpectrumType::TypeSpectrum && m_accumulatedSpectrum_Spectrum) {
+        result.spectrum = m_accumulatedSpectrum_Spectrum;
+        totalCount = static_cast<double>(m_accumulatedSpectrum_Spectrum->getTotalCount());
+    } else if (m_activeAccumulationType == ActiveSpectrumType::TypeHwSpectrum && m_accumulatedSpectrum_HwSpectrum) {
+        result.hwSpectrum = m_accumulatedSpectrum_HwSpectrum;
+        totalCount = static_cast<double>(m_accumulatedSpectrum_HwSpectrum->getTotalCount());
+    } else {
+        nucare::logW() << "SpectrumAccumulator: No accumulated spectrum data available or type mismatch on stop. ActiveType: " << static_cast<int>(m_activeAccumulationType);
+    }
 
     result.totalCPS = (result.executionRealtimeSeconds > 0.00001) ? (totalCount / result.executionRealtimeSeconds) : 0.0;
 
@@ -171,37 +174,38 @@ void SpectrumAccumulator::onNcManagerSpectrumReceived(std::shared_ptr<Spectrum> 
         return;
     }
 
-    if (m_mode == AccumulationMode::ByTime || m_mode == AccumulationMode::ContinuousByTime) {
-        if (spcFromSignal && std::holds_alternative<std::shared_ptr<Spectrum>>(m_accumulatedSpectrumVariant)) {
-            std::get<std::shared_ptr<Spectrum>>(m_accumulatedSpectrumVariant)->accumulate(*spcFromSignal);
+    if (m_activeAccumulationType == ActiveSpectrumType::TypeSpectrum) {
+        if (spcFromSignal && m_accumulatedSpectrum_Spectrum) {
+            m_accumulatedSpectrum_Spectrum->accumulate(*spcFromSignal);
         } else if (!spcFromSignal) {
             nucare::logW() << "SpectrumAccumulator: Received null Spectrum in ByTime mode from NcManager.";
-        } else {
-            nucare::logE() << "SpectrumAccumulator: Variant type error in ByTime mode onNcManagerSpectrumReceived. Expected Spectrum.";
+        } else { // m_accumulatedSpectrum_Spectrum is null
+            nucare::logE() << "SpectrumAccumulator: m_accumulatedSpectrum_Spectrum is null in ByTime mode.";
         }
-    } else if (m_mode == AccumulationMode::ByCount || m_mode == AccumulationMode::ContinuousByCount) {
+    } else if (m_activeAccumulationType == ActiveSpectrumType::TypeHwSpectrum) {
         nucare::DetectorComponent* detComp = ComponentManager::instance().detectorComponent();
         if (detComp && detComp->properties()) {
             std::shared_ptr<HwSpectrum> originHwSpc = detComp->properties()->getOriginSpc();
 
-            if (originHwSpc && std::holds_alternative<std::shared_ptr<HwSpectrum>>(m_accumulatedSpectrumVariant)) {
-                std::get<std::shared_ptr<HwSpectrum>>(m_accumulatedSpectrumVariant)->accumulate(*originHwSpc);
-                double currentTotalCount = std::get<std::shared_ptr<HwSpectrum>>(m_accumulatedSpectrumVariant)->getTotalCount();
+            if (originHwSpc && m_accumulatedSpectrum_HwSpectrum) {
+                m_accumulatedSpectrum_HwSpectrum->accumulate(*originHwSpc);
+                double currentTotalCount = m_accumulatedSpectrum_HwSpectrum->getTotalCount();
                 if (m_targetCountValue > 0 && currentTotalCount >= m_targetCountValue) {
                     nucare::logI() << "SpectrumAccumulator: Target count " << m_targetCountValue << " reached.";
                     internalStopAccumulation(true);
                 }
             } else if (!originHwSpc) {
                 nucare::logW() << "SpectrumAccumulator: Failed to get HwSpectrum from DetectorProperty::getOriginSpc() in ByCount mode (nullptr received).";
-            } else { // Variant holds unexpected type
-                nucare::logE() << "SpectrumAccumulator: Variant type error in ByCount mode when accessing DetectorProperty.";
+            } else { // m_accumulatedSpectrum_HwSpectrum is null
+                nucare::logE() << "SpectrumAccumulator: m_accumulatedSpectrum_HwSpectrum is null in ByCount mode.";
             }
         } else {
             nucare::logW() << "SpectrumAccumulator: DetectorComponent or its properties not available for ByCount mode.";
         }
+    } else {
+        nucare::logW() << "SpectrumAccumulator: Data received but active spectrum type is None. Mode: " << static_cast<int>(m_mode);
     }
 }
-
 
 void SpectrumAccumulator::onAccumulationTimeout() {
     if (m_currentState != AccumulatorState::Measuring) {
@@ -231,8 +235,8 @@ void SpectrumAccumulator::onContinuousIntervalTimeout() {
 }
 
 void SpectrumAccumulator::adjustTargetTime(int secondsDelta) {
-    if (m_mode != AccumulationMode::ByTime && m_mode != AccumulationMode::ContinuousByTime) {
-        nucare::logW() << "SpectrumAccumulator: adjustTargetTime called but not in a time-based mode.";
+    if (m_activeAccumulationType != ActiveSpectrumType::TypeSpectrum) {
+        nucare::logW() << "SpectrumAccumulator: adjustTargetTime called but not in a time-based accumulation type (TypeSpectrum). ActiveType: " << static_cast<int>(m_activeAccumulationType);
         return;
     }
 
@@ -261,8 +265,8 @@ void SpectrumAccumulator::adjustTargetTime(int secondsDelta) {
 }
 
 void SpectrumAccumulator::adjustTargetCount(int countDelta) {
-    if (m_mode != AccumulationMode::ByCount && m_mode != AccumulationMode::ContinuousByCount) {
-        nucare::logW() << "SpectrumAccumulator: adjustTargetCount called but not in a count-based mode.";
+    if (m_activeAccumulationType != ActiveSpectrumType::TypeHwSpectrum) {
+        nucare::logW() << "SpectrumAccumulator: adjustTargetCount called but not in a count-based accumulation type (TypeHwSpectrum). ActiveType: " << static_cast<int>(m_activeAccumulationType);
         return;
     }
 
@@ -275,14 +279,11 @@ void SpectrumAccumulator::adjustTargetCount(int countDelta) {
     nucare::logI() << "SpectrumAccumulator: Target count adjusted by " << countDelta << ". New target: " << m_targetCountValue;
 
     if (m_currentState == AccumulatorState::Measuring) {
-        if (std::holds_alternative<std::shared_ptr<HwSpectrum>>(m_accumulatedSpectrumVariant)) {
-            auto& hwSpc = std::get<std::shared_ptr<HwSpectrum>>(m_accumulatedSpectrumVariant);
-            if (hwSpc && hwSpc->getTotalCount() >= m_targetCountValue) {
-                nucare::logI() << "SpectrumAccumulator: Count adjustment resulted in target count already being met.";
-                internalStopAccumulation(true);
-            }
-        } else {
-             nucare::logW() << "SpectrumAccumulator: adjustTargetCount: Variant not holding HwSpectrum in ByCount mode.";
+        if (m_accumulatedSpectrum_HwSpectrum && m_accumulatedSpectrum_HwSpectrum->getTotalCount() >= m_targetCountValue) {
+            nucare::logI() << "SpectrumAccumulator: Count adjustment resulted in target count already being met.";
+            internalStopAccumulation(true);
+        } else if (!m_accumulatedSpectrum_HwSpectrum) {
+            nucare::logE() << "SpectrumAccumulator: adjustTargetCount: m_accumulatedSpectrum_HwSpectrum is null in Measuring state.";
         }
     }
 }

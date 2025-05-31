@@ -6,8 +6,8 @@
 #include <QObject>
 #include <QTimer>
 #include <QDateTime>
-#include <variant>        // For std::variant
 #include <memory>         // For std::shared_ptr
+// #include <variant>     // REMOVE THIS LINE (if it was there)
 
 // Forward declare DetectorComponent and DetectorPackage if needed by slots
 namespace nucare {
@@ -100,14 +100,17 @@ private:
     // Core state and configuration
     AccumulationMode m_mode; // New enum type
     AccumulatorState m_currentState; // From AccumulationDataTypes.h
+    ActiveSpectrumType m_activeAccumulationType; // ADD THIS
+
     int m_targetCountValue;
     int m_timeoutValueSeconds;
 
     int m_continuousIntervalSeconds;
     QTimer* m_continuousIntervalTimer;
 
-    // Internal spectrum storage using variant of shared_ptrs
-    std::variant<std::shared_ptr<Spectrum>, std::shared_ptr<HwSpectrum>> m_accumulatedSpectrumVariant;
+    // std::variant<...> m_accumulatedSpectrumVariant; // REMOVE THIS LINE
+    std::shared_ptr<Spectrum> m_accumulatedSpectrum_Spectrum;   // ADD THIS
+    std::shared_ptr<HwSpectrum> m_accumulatedSpectrum_HwSpectrum; // ADD THIS
 
     QTimer* m_accumulationTimer;
 
