@@ -38,6 +38,7 @@ public:
 signals:
     void detectorInfoReceived(DetectorComponent* dev, std::shared_ptr<GcResponse> info);
     void packageReceived(DetectorComponent* dev, std::shared_ptr<DetectorPackage> packageData);
+    void detectorInitialized();
     void errorOccurred(const QString &errorMessage);
 
 private slots:

@@ -6,6 +6,7 @@
 #include <QFuture>
 #include <QFutureWatcher>
 #include <functional>
+#include <QFontMetrics>
 #include "model/Matrix.h"
 
 namespace nucare {
@@ -94,6 +95,9 @@ inline QDebug logE() {
 inline QDebug logW() {
     return createLogStream(QtWarningMsg, "WARN");
 }
+
+QString toExponentUnicode(const char& c);
+QString toExponentFormat(const int& base, const int& exponent);
 
 template<class P>
 QString toString(const P& p);
@@ -211,6 +215,22 @@ inline double determine(const nucare::math::Matrix& m) {
 }
 
 } // namespace nucare
+
+namespace ui {
+
+inline int textWidth(QFontMetrics& metric, QString&& text) {
+#if QT_VERSION < QT_VERSION_CHECK(6, 3, 0)
+    return metric.horizontalAdvance(text);
+#else
+    return metric.width(text);
+#endif
+}
+
+inline int textWidth(QFontMetrics& metric, QString& text) {
+    return textWidth(metric, std::move(text));
+}
+
+}
 
 #define NC_UTIL_CLEAR_BGR(v) v->setAttribute(Qt::WA_NoSystemBackground)
 

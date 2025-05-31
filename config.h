@@ -42,4 +42,8 @@ constexpr const char* SETTING_TAG = "SettingScreen";
 constexpr const char* CHOICE_TAG  = "ChoiceDlg";
 }  // namespace tag
 
+namespace ui {
+constexpr const int PADDING_1 = 4;
+}
+
 #endif // NDT_CONFIG_H

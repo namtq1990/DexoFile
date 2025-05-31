@@ -2,6 +2,8 @@
 #include "ui_statusbarwidget.h"
 #include "componentmanager.h"
 #include "controller/wifi_service.h"
+#include "component/detectorcomponent.h"
+#include "model/DetectorProp.h"
 #include <QDateTime>
 
 StatusBarWidget::StatusBarWidget(QWidget *parent) :
@@ -24,6 +26,12 @@ StatusBarWidget::StatusBarWidget(QWidget *parent) :
         });
         connect(wifiService, &WiFiService::disconnected, this, [this]() {
             updateWifiStatus();
+        });
+    }
+
+    if (auto detector = ComponentManager::instance().detectorComponent()) {
+        connect(detector, &nucare::DetectorComponent::detectorInitialized, this, [this, detector]() {
+            ui->serialLabel->setText(detector->properties()->getSerial());
         });
     }
 

@@ -26,23 +26,21 @@ HomePage::HomePage(QWidget* parent) : BaseScreen(tag::HOME_TAG, parent), ui(new 
     // Or, set an alternative action if desired. For this example, let's leave it default (invalid).
     // You can access UI elements via ui->... e.g. ui->titleLabel->setText("New Title");
 
-    setCenterAction(new ViewAction(
-        "Scan ID",
-        [this]() {
-            nucare::logD() << "Scan ID action triggered from HomePage";
-            // TODO: if(m_navComponent) m_navComponent->navigateTo(new IdScanPage(m_navComponent, this));
-            return true;
-        },
-        nullptr));
-
-    setRightAction(new ViewAction(
+    setLeftAction(new ViewAction(
         "Events",
         [this]() {
             nucare::logD() << "Event action triggered";
             return true;
         },
         nullptr));
-
+    setCenterAction(new ViewAction(
+        "Start",
+        [this]() {
+            nucare::logD() << "Scan ID action triggered from HomePage";
+            // TODO: if(m_navComponent) m_navComponent->navigateTo(new IdScanPage(m_navComponent, this));
+            return true;
+        },
+        nullptr));
     setRightAction(new ViewAction(
         "Settings",
         [this]() {
@@ -53,6 +51,7 @@ HomePage::HomePage(QWidget* parent) : BaseScreen(tag::HOME_TAG, parent), ui(new 
             return true;
         },
         nullptr));
+    setLongLeftAction(new ViewAction("Spectrum"));
 }
 
 HomePage::~HomePage() { delete ui; }

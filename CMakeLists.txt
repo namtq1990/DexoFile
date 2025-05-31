@@ -65,6 +65,8 @@ set(PROJECT_SOURCES
         widget/ChoicesDialog.ui
         widget/settingitemdelegate.h
         widget/settingitemdelegate.cpp
+        widget/SpectrumView.h
+        widget/SpectrumView.cpp
         component/component.h
         component/component.cpp
         component/navigationcomponent.h

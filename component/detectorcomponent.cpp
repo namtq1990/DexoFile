@@ -259,6 +259,8 @@ void DetectorComponent::initialize()
 
     m_properties->setCalibration(ret);
     m_properties->m_initialized = true;
+
+    emit detectorInitialized();
 }
 
 void DetectorComponent::readData()

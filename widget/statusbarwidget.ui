@@ -39,7 +39,7 @@
     <number>0</number>
    </property>
    <item>
-    <widget class="QLabel" name="wifiIconLabel">
+    <widget class="QLabel" name="serialLabel">
      <property name="minimumSize">
       <size>
        <width>20</width>
@@ -48,38 +48,11 @@
      </property>
      <property name="font">
       <font>
-       <pointsize>9</pointsize>
+       <pointsize>6</pointsize>
       </font>
      </property>
      <property name="text">
       <string/>
-     </property>
-     <property name="pixmap">
-      <pixmap resource="../res/resource.qrc">:/icons/wifi.png</pixmap>
-     </property>
-     <property name="alignment">
-      <set>Qt::AlignCenter</set>
-     </property>
-    </widget>
-   </item>
-   <item>
-    <widget class="QLabel" name="volumeIconLabel">
-     <property name="minimumSize">
-      <size>
-       <width>20</width>
-       <height>20</height>
-      </size>
-     </property>
-     <property name="font">
-      <font>
-       <pointsize>9</pointsize>
-      </font>
-     </property>
-     <property name="text">
-      <string/>
-     </property>
-     <property name="pixmap">
-      <pixmap resource="../res/resource.qrc">:/icons/sound_on.png</pixmap>
      </property>
      <property name="alignment">
       <set>Qt::AlignCenter</set>
@@ -129,7 +102,7 @@
     </spacer>
    </item>
    <item>
-    <widget class="QLabel" name="notificationIconLabel">
+    <widget class="QLabel" name="wifiIconLabel">
      <property name="minimumSize">
       <size>
        <width>20</width>
@@ -142,28 +115,10 @@
       </font>
      </property>
      <property name="text">
-      <string>N</string>
+      <string/>
      </property>
-     <property name="alignment">
-      <set>Qt::AlignCenter</set>
-     </property>
-    </widget>
-   </item>
-   <item>
-    <widget class="QLabel" name="batteryIconLabel">
-     <property name="minimumSize">
-      <size>
-       <width>20</width>
-       <height>20</height>
-      </size>
-     </property>
-     <property name="font">
-      <font>
-       <pointsize>9</pointsize>
-      </font>
-     </property>
-     <property name="text">
-      <string>B</string>
+     <property name="pixmap">
+      <pixmap resource="../res/resource.qrc">:/icons/wifi.png</pixmap>
      </property>
      <property name="alignment">
       <set>Qt::AlignCenter</set>

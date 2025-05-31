@@ -42,7 +42,7 @@ public:
     navigation::NavigationComponent* navigationComponent() const;
     ThemeManager* themeManager() const;
     nucare::InputComponent* inputComponent() const; // Getter for nucare::InputComponent
-    nucare::DetectorComponent* detectorComponent() const; // Getter for DetectorComponent
+    nucare::DetectorComponent* detectorComponent() const { return m_detectorComponent; }
     QSharedPointer<NcManager> ncManager() const; // Getter for NcManager
     PlatformController* platformController() const;
     WiFiService* wifiService() const;
