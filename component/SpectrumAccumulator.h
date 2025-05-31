@@ -86,9 +86,14 @@ public slots:
     void stop();
 
 signals:
-    void stateChanged(AccumulatorState newState); // Uses AccumulatorState from AccumulationDataTypes.h
-    void accumulationUpdated(const AccumulationResult& currentSnapshot); // ADD THIS NEW SIGNAL
-    void accumulationComplete(const AccumulationResult& finalResult);   // Existing signal
+    void stateChanged(AccumulatorState newState);
+    void accumulationUpdated(); // CHANGED: Parameter-less
+    // void accumulationComplete(const AccumulationResult& finalResult); // REMOVED
+
+public: // Added public section for getters
+    AccumulationResult& getCurrentAccumulationResult(); // ADDED: Non-const getter
+    AccumulatorState getCurrentState() const;           // ADDED/ENSURED
+    AccumulationMode getCurrentMode() const;            // ADDED/ENSURED
 
 private slots:
     void onNcManagerSpectrumReceived(std::shared_ptr<Spectrum> spcFromSignal);
@@ -110,13 +115,14 @@ private:
     QTimer* m_continuousIntervalTimer;
 
     // std::variant<...> m_accumulatedSpectrumVariant; // REMOVE THIS LINE
-    std::shared_ptr<Spectrum> m_accumulatedSpectrum_Spectrum;   // ADD THIS
-    std::shared_ptr<HwSpectrum> m_accumulatedSpectrum_HwSpectrum; // ADD THIS
+    std::shared_ptr<Spectrum> m_accumulatedSpectrum_Spectrum;
+    std::shared_ptr<HwSpectrum> m_accumulatedSpectrum_HwSpectrum;
+
+    AccumulationResult m_currentResultSnapshot; // ADDED
 
     QTimer* m_accumulationTimer;
-
-    QDateTime m_startTime;
-    QDateTime m_finishTime;
+    // QDateTime m_startTime; // REMOVED
+    // QDateTime m_finishTime; // REMOVED
 
     // Internal methods
     void internalStartAccumulation();
