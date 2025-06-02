@@ -119,6 +119,9 @@ set(PROJECT_SOURCES
         page/SpectrumViewerScreen.ui
         page/SpectrumViewerScreen.h
         page/SpectrumViewerScreen.cpp
+        page/CalibrationScreen.ui
+        page/CalibrationScreen.h
+        page/CalibrationScreen.cpp
         controller/wifi_service.h
         controller/wifi_service.cpp
         controller/platform_controller.h
