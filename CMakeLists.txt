@@ -116,6 +116,9 @@ set(PROJECT_SOURCES
         page/BgrScreen.ui
         page/BgrScreen.h
         page/BgrScreen.cpp
+        page/SpectrumViewerScreen.ui
+        page/SpectrumViewerScreen.h
+        page/SpectrumViewerScreen.cpp
         controller/wifi_service.h
         controller/wifi_service.cpp
         controller/platform_controller.h
