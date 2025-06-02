@@ -56,14 +56,14 @@ public:
     void setCoefficient(Coeffcients* coef) { mData.coef = coef; }
     void setGridRows(const int rows);
     void setGridCols(const int cols);
-    double tranformXValue(const double& rawValue);
-    double tranformYValue(const double& rawValue);
-    double toXValue(const double& chartValue);
-    double toYValue(const double& chartValue);
+    double tranformXValue(const double rawValue);
+    double tranformYValue(const double rawValue);
+    double toXValue(const double chartValue);
+    double toYValue(const double chartValue);
     QString toXAxisText(const int index, const double& value);
-    QString toYAxisText(const double& value);
-    bool shouldShowYLabel(const int& index, const double& value);
-    bool shouldShowXLabel(const int& index, const double& value);
+    QString toYAxisText(const double value);
+    bool shouldShowYLabel(const int index, const double value);
+    bool shouldShowXLabel(const int index, const double value);
 
 
 };
@@ -229,7 +229,7 @@ void SpectrumView_t<SpectrumType>::setData(std::shared_ptr<SpectrumType> spc) {
     mData.spc = spc;
     mData.chsize = spc->getSize();
     mData.maxX = spc->getSize();
-    auto maxValue = *std::max_element(data, data + mData.chsize);
+    auto maxValue = *std::max_element(data, data + mData.chsize - 1);
 
     mData.maxY = toYValue(tranformYValue(maxValue) * 1.2);
     mData.maxY = std::max(mData.maxY, (int) toYValue(mData.rows)); // std::max
@@ -254,12 +254,12 @@ void SpectrumView_t<SpectrumType>::setGridCols(const int cols)
 }
 
 template <typename SpectrumType>
-double SpectrumView_t<SpectrumType>::tranformXValue(const double& rawValue) {
+double SpectrumView_t<SpectrumType>::tranformXValue(const double rawValue) {
     return rawValue;
 }
 
 template <typename SpectrumType>
-double SpectrumView_t<SpectrumType>::tranformYValue(const double &rawValue) {
+double SpectrumView_t<SpectrumType>::tranformYValue(const double rawValue) {
     if (rawValue < 10) {
         return rawValue / 10;
     } else {
@@ -280,18 +280,18 @@ QString SpectrumView_t<SpectrumType>::toXAxisText(const int /*index*/, const dou
 }
 
 template <typename SpectrumType>
-QString SpectrumView_t<SpectrumType>::toYAxisText(const double& value) {
+QString SpectrumView_t<SpectrumType>::toYAxisText(const double value) {
     auto exp = (int) round(tranformYValue(value));
     return nucare::toExponentFormat(10, exp);
 }
 
 template <typename SpectrumType>
-double SpectrumView_t<SpectrumType>::toXValue(const double &chartValue) {
+double SpectrumView_t<SpectrumType>::toXValue(const double chartValue) {
     return chartValue;
 }
 
 template <typename SpectrumType>
-double SpectrumView_t<SpectrumType>::toYValue(const double &chartValue) {
+double SpectrumView_t<SpectrumType>::toYValue(const double chartValue) {
     if (chartValue < 1) {
         return chartValue * 10;
     }
@@ -299,12 +299,12 @@ double SpectrumView_t<SpectrumType>::toYValue(const double &chartValue) {
 }
 
 template <typename SpectrumType>
-bool SpectrumView_t<SpectrumType>::shouldShowXLabel(const int &/*index*/, const double &/*value*/) {
+bool SpectrumView_t<SpectrumType>::shouldShowXLabel(const int /*index*/, const double /*value*/) {
     return true;
 }
 
 template <typename SpectrumType>
-bool SpectrumView_t<SpectrumType>::shouldShowYLabel(const int &index, const double &value) {
+bool SpectrumView_t<SpectrumType>::shouldShowYLabel(const int index, const double value) {
     Q_UNUSED(index);
     return value > 0;
 }

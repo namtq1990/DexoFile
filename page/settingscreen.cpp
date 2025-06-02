@@ -147,6 +147,11 @@ void SettingScreen::openBackground(BaseSettingItem *)
     navigation::toBackground(this);
 }
 
+void SettingScreen::openCalibration(BaseSettingItem *item)
+{
+    navigation::toCalibration(this);
+}
+
 void SettingScreen::openSwVersion(BaseSettingItem *item)
 {
     navigation::showSuccess(this, "SW version: 0.0.1");

@@ -12,27 +12,35 @@
 #include "component/detectorcomponent.h"
 #include "component/navigationcomponent.h"
 #include "component/SpectrumAccumulator.h"
+#include "component/ncmanager.h"
 #include "model/DetectorProp.h"
 #include "ui_SpectrumViewerScreen.h"
 
 #include <QDialog>
 
-void navigation::toSpectrumViewer(NavigationComponent* navController, NavigationEntry* entry, const QString& tag) {
+void navigation::toSpectrumViewer(NavigationComponent* navController, NavigationEntry* entry,
+                                  std::shared_ptr<SpectrumAccumulator> accumulator,
+                                  const QString& tag) {
     if (auto w = dynamic_cast<QWidget*>(entry->host)) {
-        entry->view = new SpectrumViewerScreen(tag, w);
+        auto view = new SpectrumViewerScreen(tag, w);
+        entry->view = view;
         entry->type = CHILD_IN_WINDOW;
         entry->childNav = new NavigationComponent(navController);
+        view->setAccumulator(accumulator);
         navController->enter(entry);
     }
 }
 
-navigation::NavigationEntry* navigation::toSpectrumViewer(BaseView* parent) {
+navigation::NavigationEntry* navigation::toSpectrumViewer(BaseView* parent, std::shared_ptr<SpectrumAccumulator> accumulator) {
     auto nav = parent->getNavigation();
     auto widget = dynamic_cast<QWidget*>(parent);
+    auto view = new SpectrumViewerScreen(tag::SPECTRUMVIEW_TAG, widget);
     auto ret = new NavigationEntry(CHILD_IN_WINDOW,
-                                   new SpectrumViewerScreen(tag::BACKGROUND_TAG, widget),
+                                   view,
                                    new NavigationComponent(nav),
                                    widget->parent());
+
+    view->setAccumulator(accumulator);
     nav->enter(ret);
 
     return ret;
@@ -70,15 +78,14 @@ void SpectrumViewerScreen::setupLayout() {
 
 void SpectrumViewerScreen::onCreate(navigation::NavigationArgs *args)
 {
-    if (!m_counter) {
-        auto builder = SpectrumAccumulator::Builder()
-                .setParent(this)
-                .setTimeoutSeconds(120)
-                .setMode(SpectrumAccumulator::AccumulationMode::ByTime);
-        m_counter = builder.build();
-        connect(m_counter, &SpectrumAccumulator::accumulationUpdated, this, &SpectrumViewerScreen::onRecvSpectrum);
-        connect(m_counter, &SpectrumAccumulator::stateChanged, this, &SpectrumViewerScreen::onRecvBacground);
-        m_counter->start();
+    BaseScreen::onCreate(args);
+    if (m_counter) {
+        connect(m_counter.get(), &SpectrumAccumulator::accumulationUpdated, this, &SpectrumViewerScreen::onRecvSpectrum);
+        connect(m_counter.get(), &SpectrumAccumulator::stateChanged, this, &SpectrumViewerScreen::updateState);
+//        m_counter->start();
+        updateState();
+    } else {
+        NC_THROW_ARG_ERROR("SpectrumViewer: missing argument, Accumulator is invalid");
     }
 }
 
@@ -87,52 +94,58 @@ void SpectrumViewerScreen::reloadLocal()
     ui->retranslateUi(this);
 }
 
-//void SpectrumViewerScreen::bindData(app::uc::meter::model::Data &data)
-//{
-//    ui->acqCounter->setText(QString("%1 / %2")
-//                             .arg(data.acqTime, 2, 10, QChar('0'))
-//                             .arg(data.goalTime));
-//    ui->count->setText(QString("%1K").arg(data.spc->getTotalCount() / 1000, 3, 'f', 1));
-//    ui->cps->setText(QString::number((int) data.cps));
-//    ui->chart->setData(data.spc);
-//}
-
-void SpectrumViewerScreen::showConfirmDlg()
+void SpectrumViewerScreen::setAccumulator(std::shared_ptr<SpectrumAccumulator> accumulator)
 {
-    auto entry = BaseScreen::showInfo("Background Saved.");
-    auto action = [&]() { getNavigation()->pop(this, false); };
-
-    connect(dynamic_cast<QDialog*>(entry->view), &QDialog::accepted, this, action);
-    connect(dynamic_cast<QDialog*>(entry->view), &QDialog::rejected, this, action);
+    m_counter = accumulator;
 }
 
-void SpectrumViewerScreen::showGammaWarning()
+void SpectrumViewerScreen::setSpectrum(std::shared_ptr<Spectrum> spc)
 {
-//    auto entry = ""
-//    auto action = [&]() { getNavigation()->pop(this, false); };
-//    connect(view, &QDialog::accepted, this, action);
-    //    connect(view, &QDialog::rejected, this, action);
+    if (spc)
+        ui->chart->setData(spc);
 }
 
 void SpectrumViewerScreen::onRecvSpectrum()
 {
     if (!m_counter) return;
+
+    int cps = 0;
+    int totalCount = 0;
+    std::shared_ptr<Spectrum> spc;
+
     if (m_counter->getCurrentState() == AccumulatorState::Measuring) {
         auto& ret = m_counter->getCurrentAccumulationResult();
+        cps = ret.cps;
+        spc = ret.spectrum;
+        totalCount = ret.spectrum->getTotalCount();
+
         ui->acqCounter->setText(QString("%1 / %2")
                                 .arg(ret.count, 2, 10, QChar('0'))
                                 .arg(m_counter->getAcqTime()));
-        ui->count->setText(QString("%1K").arg(ret.spectrum->getTotalCount() / 1000, 3, 'f', 1));
-        ui->cps->setText(QString::number((int) ret.cps));
-        ui->chart->setData(ret.spectrum);
+
+        ui->timeContainer->show();
+    } else {
+        auto prop = ComponentManager::instance().detectorComponent()->properties();
+        cps = prop->getCps();
+        spc = prop->getCurrentSpectrum();
+        totalCount = spc ? spc->getTotalCount() : 0;
+        ui->timeContainer->hide();
     }
+
+    ui->count->setText(QString("%1K").arg(totalCount / 1000.0, 3, 'f', 1));
+    ui->cps->setText(QString::number(cps));
+    setSpectrum(spc);
 }
 
-void SpectrumViewerScreen::onRecvBacground()
+void SpectrumViewerScreen::updateState()
 {
-    if (!m_counter || m_counter->getCurrentState() != AccumulatorState::Completed) {
-        return;
+    auto state = m_counter->getCurrentState();
+    if (state == AccumulatorState::Measuring) {
+        if (m_frameConn) {
+            disconnect(m_frameConn);
+        }
+    } else if (!m_frameConn) {
+        auto ncManager = ComponentManager::instance().ncManager();
+        m_frameConn = connect(ncManager.get(), &NcManager::spectrumReceived, this, &SpectrumViewerScreen::onRecvSpectrum);
     }
-
-    nucare::logD() << "Background Saved." << m_counter->getCurrentAccumulationResult().cps;
 }

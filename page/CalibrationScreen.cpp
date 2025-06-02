@@ -1,11 +1,11 @@
 /*
- * BackgroundScreen.cpp
+ * CalibrationScreen.cpp
  *
  *  Created on: Nov 11, 2021
  *      Author: quangnam
  */
 
-#include "page/BgrScreen.h"
+#include "page/CalibrationScreen.h"
 #include "config.h"
 #include "base/basedialog.h"
 #include "component/componentmanager.h"
@@ -13,24 +13,24 @@
 #include "component/navigationcomponent.h"
 #include "component/SpectrumAccumulator.h"
 #include "model/DetectorProp.h"
-#include "ui_BgrScreen.h"
+#include "ui_CalibrationScreen.h"
 
 #include <QDialog>
 
-void navigation::toBackground(NavigationComponent* navController, NavigationEntry* entry, const QString& tag) {
+void navigation::toCalibration(NavigationComponent* navController, NavigationEntry* entry, const QString& tag) {
     if (auto w = dynamic_cast<QWidget*>(entry->host)) {
-        entry->view = new BackgroundScreen(tag, w);
+        entry->view = new CalibrationScreen(tag, w);
         entry->type = CHILD_IN_WINDOW;
         entry->childNav = new NavigationComponent(navController);
         navController->enter(entry);
     }
 }
 
-navigation::NavigationEntry* navigation::toBackground(BaseView* parent) {
+navigation::NavigationEntry* navigation::toCalibration(BaseView* parent) {
     auto nav = parent->getNavigation();
     auto widget = dynamic_cast<QWidget*>(parent);
     auto ret = new NavigationEntry(CHILD_IN_WINDOW,
-                                   new BackgroundScreen(tag::BACKGROUND_TAG, widget),
+                                   new CalibrationScreen(tag::BACKGROUND_TAG, widget),
                                    new NavigationComponent(nav),
                                    widget->parent());
     nav->enter(ret);
@@ -38,16 +38,16 @@ navigation::NavigationEntry* navigation::toBackground(BaseView* parent) {
     return ret;
 }
 
-BackgroundScreen::BackgroundScreen(const QString &tag, QWidget *parent)
+CalibrationScreen::CalibrationScreen(const QString &tag, QWidget *parent)
     : BaseScreen(tag, parent),
-    ui(new Ui::BackgroundScreen()),
+    ui(new Ui::CalibrationScreen()),
     m_counter(nullptr)
 {
     ui->setupUi(this);
 //    auto centerAct = new ViewAction {
 //        .name = translate("TIME"),
 //        .action = [this]() {
-//            getPresenter<BackgroundPresenter>()->toAcqDialog(getChildNavigation(), this);
+//            getPresenter<CalibrationPresenter>()->toAcqDialog(getChildNavigation(), this);
 //            return true;
 //        },
 //        .icon = ":/images/common/menu_acq_time.png"
@@ -57,38 +57,38 @@ BackgroundScreen::BackgroundScreen(const QString &tag, QWidget *parent)
     setupLayout();
 }
 
-BackgroundScreen::~BackgroundScreen()
+CalibrationScreen::~CalibrationScreen()
 {
     delete ui;
 }
 
-void BackgroundScreen::setupLayout() {
+void CalibrationScreen::setupLayout() {
     if (auto detector = ComponentManager::instance().detectorComponent()) {
         ui->chart->setCoefficient(const_cast<Coeffcients*>(&detector->properties()->getCoeffcients()));
     }
 }
 
-void BackgroundScreen::onCreate(navigation::NavigationArgs *args)
+void CalibrationScreen::onCreate(navigation::NavigationArgs *args)
 {
     BaseScreen::onCreate(args);
     if (!m_counter) {
         auto builder = SpectrumAccumulator::Builder()
                 .setParent(this)
                 .setTimeoutSeconds(120)
-                .setMode(SpectrumAccumulator::AccumulationMode::ByTime);
+                .setMode(SpectrumAccumulator::AccumulationMode::ByCount); // Changed mode to ByCount
         m_counter = builder.build();
-        connect(m_counter, &SpectrumAccumulator::accumulationUpdated, this, &BackgroundScreen::onRecvSpectrum);
-        connect(m_counter, &SpectrumAccumulator::stateChanged, this, &BackgroundScreen::onRecvBacground);
+        connect(m_counter, &SpectrumAccumulator::accumulationUpdated, this, &CalibrationScreen::onRecvSpectrum);
+        connect(m_counter, &SpectrumAccumulator::stateChanged, this, &CalibrationScreen::onRecvBacground);
         m_counter->start();
     }
 }
 
-void BackgroundScreen::reloadLocal()
+void CalibrationScreen::reloadLocal()
 {
     ui->retranslateUi(this);
 }
 
-//void BackgroundScreen::bindData(app::uc::meter::model::Data &data)
+//void CalibrationScreen::bindData(app::uc::meter::model::Data &data)
 //{
 //    ui->acqCounter->setText(QString("%1 / %2")
 //                             .arg(data.acqTime, 2, 10, QChar('0'))
@@ -98,7 +98,7 @@ void BackgroundScreen::reloadLocal()
 //    ui->chart->setData(data.spc);
 //}
 
-void BackgroundScreen::showConfirmDlg()
+void CalibrationScreen::showConfirmDlg()
 {
     auto entry = BaseScreen::showInfo("Background Saved.");
     auto action = [&]() { getNavigation()->pop(this, false); };
@@ -107,7 +107,7 @@ void BackgroundScreen::showConfirmDlg()
     connect(dynamic_cast<QDialog*>(entry->view), &QDialog::rejected, this, action);
 }
 
-void BackgroundScreen::showGammaWarning()
+void CalibrationScreen::showGammaWarning()
 {
 //    auto entry = ""
 //    auto action = [&]() { getNavigation()->pop(this, false); };
@@ -115,7 +115,7 @@ void BackgroundScreen::showGammaWarning()
     //    connect(view, &QDialog::rejected, this, action);
 }
 
-void BackgroundScreen::onRecvSpectrum()
+void CalibrationScreen::onRecvSpectrum()
 {
     if (!m_counter) return;
     if (m_counter->getCurrentState() == AccumulatorState::Measuring) {
@@ -125,11 +125,11 @@ void BackgroundScreen::onRecvSpectrum()
                                 .arg(m_counter->getAcqTime()));
         ui->count->setText(QString("%1K").arg(ret.spectrum->getTotalCount() / 1000, 3, 'f', 1));
         ui->cps->setText(QString::number((int) ret.cps));
-        ui->chart->setData(ret.spectrum);
+        ui->chart->setData(ret.hwSpectrum); // Assuming HwSpectrumView has a setData method similar to SpectrumView
     }
 }
 
-void BackgroundScreen::onRecvBacground()
+void CalibrationScreen::onRecvBacground()
 {
     if (!m_counter || m_counter->getCurrentState() != AccumulatorState::Completed) {
         return;

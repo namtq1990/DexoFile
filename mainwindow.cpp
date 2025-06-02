@@ -35,3 +35,8 @@ void MainWindow::onCreate(navigation::NavigationArgs *args) {
     BaseWindow::onCreate(args);
     navigation::toHome(getChildNavigation(), new NavigationEntry(CHILD_IN_WINDOW, nullptr, nullptr, ui->mainStackedWidget));
 }
+
+void MainWindow::updateMenu()
+{
+    ui->menuWidget->updateMenu();
+}

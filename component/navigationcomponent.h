@@ -18,6 +18,7 @@
 class BaseView;
 class SubSettingItem;
 class ChoicesDialogArgs;
+class SpectrumAccumulator;
 
 namespace navigation {
 
@@ -175,7 +176,9 @@ void toSetting(NavigationComponent* navController, NavigationEntry* entry, SubSe
                const QString& tag = tag::SETTING_TAG);
 void toBackground(NavigationComponent* navController, NavigationEntry* entry, const QString& tag = tag::SETTING_TAG);
 void toCalibration(NavigationComponent* navController, NavigationEntry* entry, const QString& tag = tag::CALIBRATION_TAG);
-void toSpectrumView(NavigationComponent* navController, NavigationEntry* entry, const QString& tag = tag::SPECTRUMVIEW_TAG);
+void toSpectrumViewer(NavigationComponent* navController, NavigationEntry* entry,
+                      std::shared_ptr<SpectrumAccumulator> accumulator,
+                      const QString& tag = tag::SPECTRUMVIEW_TAG);
 void toChoiceDlg(NavigationComponent* navController,
                  NavigationEntry* entry,
                  ChoicesDialogArgs* args,
@@ -184,7 +187,7 @@ void toChoiceDlg(NavigationComponent* navController,
 NavigationEntry* toChoiceDlg(BaseView* parent, ChoicesDialogArgs* args);
 NavigationEntry* toBackground(BaseView* parent);
 NavigationEntry* toCalibration(BaseView* parent);
-NavigationEntry* toSpectrumView(BaseView* parent);
+NavigationEntry* toSpectrumViewer(BaseView* parent, std::shared_ptr<SpectrumAccumulator> accumulator);
 
 void showWarning(NavigationComponent* navController,
                  NavigationEntry* entry,

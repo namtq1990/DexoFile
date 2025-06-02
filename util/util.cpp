@@ -46,3 +46,21 @@ QString nucare::toExponentFormat(const int &base, const int &exponent)
 
     return ret.join("");
 }
+
+QString datetime::formatDate_yyyyMMdd_HHmm(QDateTime &datetime)
+{
+    return datetime.toString("yyyyMMdd HH:mm");
+}
+
+QString datetime::formatDuration(int totalSeconds) {
+    int day = totalSeconds / (24 * 3600);
+    int hours = totalSeconds / 3600;
+    int minutes = (totalSeconds % 3600) / 60;
+
+    QStringList ret;
+    if (day > 0) ret << QString::number(day) << "d";
+    if (hours > 0) ret << QString::number(hours) << "hrs";
+    if (minutes > 0) ret << QString::number(minutes) << "min";
+
+    return ret.join("");
+}

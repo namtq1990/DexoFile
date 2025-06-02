@@ -95,6 +95,7 @@ public: // Added public section for getters
     AccumulatorState getCurrentState() const;           // ADDED/ENSURED
     AccumulationMode getCurrentMode() const;            // ADDED/ENSURED
     int getAcqTime() const;
+    int getIntervalTime() const;
 
 private slots:
     void onNcManagerSpectrumReceived(std::shared_ptr<Spectrum> spcFromSignal);

@@ -2,15 +2,14 @@
 #define HOMEPAGE_H
 
 #include "base/basescreen.h"
+#include "model/AccumulationDataTypes.h"
 
 // Forward declaration for the UI class
 namespace Ui {
 class HomePage;
 }
 
-// Forward declare other pages if actions navigate to them directly
-// class IdScanPage;
-// class SettingsPage;
+class SpectrumAccumulator;
 
 // NavigationComponent is forward-declared in basescreen.h which is included above.
 // No need for a redundant forward declaration here.
@@ -24,9 +23,18 @@ public:
 
     void reloadLocal() override;
 
+    void start();
+    void stop();
+
+    AccumulatorState getState();
+
+public slots:
+    void stateChanged(AccumulatorState);
+    void updateEvent();
+
 private:
     Ui::HomePage *ui;
-    // Other UI elements for HomePage can be accessed via ui->...
+    std::shared_ptr<SpectrumAccumulator> m_accumulator;
 };
 
 #endif // HOMEPAGE_H

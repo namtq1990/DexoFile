@@ -14,7 +14,7 @@ template <class Data = float, size_t N = nucare::CHSIZE>
 class Spectrum_t
 {
    private:
-    std::array<Data, N> m_data;
+    std::array<Data, N> m_data = {0};
     double m_acqTime = 0;
     double m_realTime = 0;
     double m_totalCount = 0;

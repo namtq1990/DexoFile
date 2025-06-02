@@ -216,6 +216,14 @@ inline double determine(const nucare::math::Matrix& m) {
 
 } // namespace nucare
 
+namespace datetime {
+
+QString formatDuration(int totalSeconds);
+
+QString formatDate_yyyyMMdd_HHmm(QDateTime& datetime);
+
+}
+
 namespace ui {
 
 inline int textWidth(QFontMetrics& metric, QString&& text) {

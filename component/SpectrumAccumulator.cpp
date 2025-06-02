@@ -76,6 +76,11 @@ int SpectrumAccumulator::getAcqTime() const
     return m_timeoutValueSeconds;
 }
 
+int SpectrumAccumulator::getIntervalTime() const
+{
+    return m_continuousIntervalSeconds;
+}
+
 void SpectrumAccumulator::transitionToState(AccumulatorState newState) {
     if (m_currentState == newState) {
         return;
@@ -107,6 +112,7 @@ void SpectrumAccumulator::stop() {
 
     m_accumulationTimer->stop();
     m_continuousIntervalTimer->stop();
+    m_currentResultSnapshot = AccumulationResult();
 
     if (previousState == AccumulatorState::Measuring) {
         internalStopAccumulation(false);
@@ -127,7 +133,9 @@ void SpectrumAccumulator::internalStartAccumulation() {
     nucare::logI() << "SpectrumAccumulator: Internal accumulation starting. Mode: " << static_cast<int>(m_mode) << ", ActiveType: " << static_cast<int>(m_activeAccumulationType);
 
     m_currentResultSnapshot.startTime = QDateTime::currentDateTime();
-    m_currentResultSnapshot.finishTime = m_currentResultSnapshot.startTime; // Initialize finish time
+    m_currentResultSnapshot.finishTime = m_currentResultSnapshot.startTime.addSecs(m_timeoutValueSeconds); // Initialize finish time
+//    m_currentResultSnapshot.finishTime = QDateTime::fromSecsSinceEpoch(m_currentResultSnapshot.startTime.toSecsSinceEpoch() + m_timeoutValueSeconds);
+
     m_currentResultSnapshot.executionRealtimeSeconds = 0.0;
     m_currentResultSnapshot.cps = 0.0;
     m_currentResultSnapshot.activeType = m_activeAccumulationType; // Ensure activeType is set in snapshot
@@ -172,7 +180,6 @@ void SpectrumAccumulator::internalStopAccumulation(bool conditionMet) {
     m_accumulationTimer->stop();
     transitionToState(AccumulatorState::Completed);
 
-    m_currentResultSnapshot.finishTime = QDateTime::currentDateTime();
     m_currentResultSnapshot.executionRealtimeSeconds = static_cast<double>(m_currentResultSnapshot.startTime.msecsTo(m_currentResultSnapshot.finishTime)) / 1000.0;
 
     double finalTotalCount = 0;
@@ -239,7 +246,6 @@ void SpectrumAccumulator::onNcManagerSpectrumReceived(std::shared_ptr<Spectrum> 
     }
 
     if(accumulatedSomething) {
-        m_currentResultSnapshot.finishTime = QDateTime::currentDateTime();
         m_currentResultSnapshot.executionRealtimeSeconds = static_cast<double>(m_currentResultSnapshot.startTime.msecsTo(m_currentResultSnapshot.finishTime)) / 1000.0;
         m_currentResultSnapshot.cps = prop->getCps();
         m_currentResultSnapshot.count++;
@@ -293,6 +299,7 @@ void SpectrumAccumulator::adjustTargetTime(int secondsDelta) {
         nucare::logW() << "SpectrumAccumulator: Adjusted time resulted in less than 1s, setting to 1s.";
     }
     m_timeoutValueSeconds = newTimeout;
+    m_currentResultSnapshot.finishTime = m_currentResultSnapshot.startTime.addSecs(m_timeoutValueSeconds);
     nucare::logI() << "SpectrumAccumulator: Target time adjusted by " << secondsDelta << "s. New target: " << m_timeoutValueSeconds << "s.";
 
     if (m_currentState == AccumulatorState::Measuring && m_accumulationTimer->isActive()) {

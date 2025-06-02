@@ -34,7 +34,7 @@ SubSettingItem* setting::buildSettingTree() {
                      },
                      ret))
                     ->setName("Calibration Count"),
-                (new InfoSettingItem(ret))->setName("Energy Calibration"),
+                (new InfoSettingItem(ret))->setName("Energy Calibration")->setClickAction("openCalibration"),
                 (new ChoiceSettingItem(
                      {
                          {"Eu-152", "Eu-152"},

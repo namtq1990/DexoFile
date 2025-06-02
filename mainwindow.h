@@ -18,6 +18,7 @@ public:
     void reloadLocal() override;
 
     void onCreate(navigation::NavigationArgs* args) override;
+    void updateMenu() override;
 
 private:
     Ui::MainWindow *ui;
