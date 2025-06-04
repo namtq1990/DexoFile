@@ -17,13 +17,33 @@
 #include <QSqlError>
 #include <QCoreApplication>
 #include <QSqlQuery>
-#include <QVariant> // For QVariant
+#include <QVariant>
+#include <QVariantMap>
 
 namespace nucare {
 
 DatabaseManager::DatabaseManager(QObject *parent)
     : QObject(parent), Component("DATABASE")
 {
+}
+
+bool DatabaseManager::executeQuery(QSqlQuery& query, const QString& context) {
+    QString sql = query.lastQuery();
+    for (const auto& key : query.boundValues().keys()) {
+        sql.replace(key, query.boundValue(key).toString());
+    }
+    
+    logD() << "Executing SQL [" << context << "]: " << sql;
+    
+    bool success = query.exec();
+    if (!success) {
+        logE() << "SQL execution failed [" << context << "]: " << query.lastError().text();
+        logE() << "Failed SQL: " << sql;
+    } else {
+        logD() << "SQL executed successfully [" << context << "]";
+    }
+    
+    return success;
 }
 
 DatabaseManager::~DatabaseManager()
@@ -178,6 +198,13 @@ bool DatabaseManager::createTablesIfNotExist()
                         "spectrum TEXT, "
                         "event_id INTEGER, "
                         "FOREIGN KEY(event_id) REFERENCES event(event_id) ON DELETE CASCADE ON UPDATE CASCADE)");
+    if (!success) logE() << query.lastError().text();
+
+    // setup table
+    success &= query.exec("CREATE TABLE IF NOT EXISTS setup ("
+                        "Name TEXT NOT NULL UNIQUE, "
+                        "Value TEXT, "
+                        "PRIMARY KEY(Name))");
     if (!success) logE() << query.lastError().text();
 
     return success;
@@ -632,6 +659,143 @@ int DatabaseManager::insertEvent(const Event* event)
         return -1;
     }
     return query.lastInsertId().toInt();
+}
+
+int DatabaseManager::insertDetectorCalibConfig(const DetectorCalibConfig* config)
+{
+    QSqlQuery query(m_database);
+    // Use INSERT OR REPLACE to update if detectorId exists, otherwise insert
+    query.prepare("INSERT OR REPLACE INTO detector_config (detectorId, chPeakA, chPeakB, chPeakC, Time, Spectrum) "
+                 "VALUES (:detectorId, :chPeakA, :chPeakB, :chPeakC, :Time, :Spectrum)");
+    
+    query.bindValue(":detectorId", config->detectorId);
+    query.bindValue(":chPeakA", config->calib[0]);
+    query.bindValue(":chPeakB", config->calib[1]);
+    query.bindValue(":chPeakC", config->calib[2]);
+    query.bindValue(":Time", config->time.toString(Qt::ISODate));
+    
+    QByteArray spectrumData;
+    if (config->spc) {
+        spectrumData = config->spc->toString().toUtf8();
+    }
+    query.bindValue(":Spectrum", spectrumData);
+
+    if (!query.exec()) {
+        logE() << "Failed to insert/replace DetectorCalibConfig:" << query.lastError().text();
+        return -1;
+    }
+    return query.lastInsertId().toInt(); // Returns the rowid of the last inserted row
+}
+
+QSqlQuery DatabaseManager::executeSingleRowQuery(const QString& queryString, const QVariantMap& bindValues)
+{
+    QSqlQuery query(m_database);
+    query.prepare(queryString);
+    for (auto it = bindValues.constBegin(); it != bindValues.constEnd(); ++it) {
+        query.bindValue(it.key(), it.value());
+    }
+
+    if (!query.exec()) {
+        logE() << "SQL Query failed:" << query.lastError().text() << "Query:" << queryString;
+    }
+    return query;
+}
+
+std::shared_ptr<Background> DatabaseManager::getLatestBackground(int detectorId)
+{
+    QString queryString = "SELECT id, spectrum, acqTime, realTime, detectorId, date FROM background WHERE detectorId = :detectorId ORDER BY date DESC LIMIT 1";
+    QVariantMap bindValues;
+    bindValues[":detectorId"] = detectorId;
+
+    QSqlQuery query = executeSingleRowQuery(queryString, bindValues);
+
+    if (query.next()) {
+        auto background = std::make_shared<Background>();
+        background->id = query.value("id").toInt();
+
+        QString spectrumDataStr = query.value("spectrum").toString();
+        auto spectrum = std::shared_ptr<Spectrum>(Spectrum::pFromString(spectrumDataStr));
+        
+        spectrum->setAcqTime(query.value("acqTime").toInt());
+        spectrum->setRealTime(query.value("realTime").toDouble());
+        spectrum->setDetectorID(query.value("detectorId").toInt());
+        
+        background->spc = spectrum;
+        background->date = query.value("date").toString();
+        return background;
+    }
+
+    return nullptr;
+}
+
+std::shared_ptr<Calibration> DatabaseManager::getLatestCalibration(int detectorId)
+{
+    QString queryString = "SELECT id, detector_id, coef_a, coef_b, coef_c, gc, ratio, chpeak_a, chpeak_b, chpeak_c, time, temperature FROM calibration WHERE detector_id = :detector_id ORDER BY time DESC LIMIT 1";
+    QVariantMap bindValues;
+    bindValues[":detector_id"] = detectorId;
+
+    QSqlQuery query = executeSingleRowQuery(queryString, bindValues);
+
+    if (query.next()) {
+        auto calibration = std::make_shared<Calibration>();
+        calibration->setId(query.value("id").toInt());
+        calibration->setDetectorId(query.value("detector_id").toInt());
+        
+        Coeffcients coefficients;
+        coefficients[0] = query.value("coef_a").toDouble();
+        coefficients[1] = query.value("coef_b").toDouble();
+        coefficients[2] = query.value("coef_c").toDouble();
+        calibration->setCoefficients(coefficients);
+
+        calibration->setGC(query.value("gc").toInt());
+        calibration->setRatio(query.value("ratio").toDouble());
+
+        Coeffcients chPeaks;
+        chPeaks[0] = query.value("chpeak_a").toDouble();
+        chPeaks[1] = query.value("chpeak_b").toDouble();
+        chPeaks[2] = query.value("chpeak_c").toDouble();
+        calibration->setChCoefficients(chPeaks);
+
+        calibration->setDate(nucare::Timestamp::fromString(query.value("time").toString(), Qt::ISODate));
+        calibration->setTemperature(query.value("temperature").toDouble());
+        
+        return calibration;
+    }
+
+    return nullptr;
+}
+
+QVariant DatabaseManager::getSetting(const QString& name, const QVariant& defaultValue) {
+    QSqlQuery query(m_database);
+    query.prepare("SELECT Value FROM setup WHERE Name = ?");
+    query.addBindValue(name);
+    
+    if (query.exec() && query.next()) {
+        return query.value(0);
+    }
+    return defaultValue;
+}
+
+void DatabaseManager::setSetting(const QString& name, const QVariant& value) {
+    QSqlQuery query;
+    query.prepare("INSERT OR REPLACE INTO setup (Name, Value) VALUES (?, ?)");
+    query.addBindValue(name);
+    query.addBindValue(value.toString());
+    
+    if (!query.exec()) {
+        logE() << "Failed to save setting:" << name << query.lastError();
+    }
+}
+
+QMap<QString, QVariant> DatabaseManager::getAllSettings() {
+    QMap<QString, QVariant> settings;
+    QSqlQuery query("SELECT Name, Value FROM setup");
+    
+    while (query.next()) {
+        settings.insert(query.value(0).toString(), query.value(1));
+    }
+    
+    return settings;
 }
 
 } // namespace nucare

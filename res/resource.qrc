@@ -6,5 +6,6 @@
         <file alias="menu_down">icons/menu_down.png</file>
         <file alias="menu_ok">icons/menu_ok.png</file>
         <file alias="menu_up">icons/menu_up.png</file>
+        <file alias="menu_acq_time">icons/menu_acq_time.png</file>
     </qresource>
 </RCC>

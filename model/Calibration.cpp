@@ -1,12 +1,12 @@
 #include "Calibration.h"
 #include <cstring>
 
-const std::shared_ptr<Spectrum> &Calibration::spc() const
+const std::shared_ptr<HwSpectrum> &Calibration::spc() const
 {
     return mSpc;
 }
 
-void Calibration::setSpc(const std::shared_ptr<Spectrum> &newSpc)
+void Calibration::setSpc(std::shared_ptr<HwSpectrum> newSpc)
 {
     mSpc = newSpc;
 }

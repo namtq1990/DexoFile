@@ -122,6 +122,8 @@ set(PROJECT_SOURCES
         page/CalibrationScreen.ui
         page/CalibrationScreen.h
         page/CalibrationScreen.cpp
+        page/CalibAcqDialog.h
+        page/CalibAcqDialog.cpp
         controller/wifi_service.h
         controller/wifi_service.cpp
         controller/platform_controller.h

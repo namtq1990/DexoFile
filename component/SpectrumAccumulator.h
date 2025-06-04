@@ -82,6 +82,7 @@ public slots:
     // Dynamic adjustments + public start/stop
     void adjustTargetTime(int secondsDelta);
     void adjustTargetCount(int countDelta);
+    void setTargetCount(int count);
     void start();
     void stop();
 

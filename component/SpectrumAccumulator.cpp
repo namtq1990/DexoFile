@@ -341,3 +341,26 @@ void SpectrumAccumulator::adjustTargetCount(int countDelta) {
         }
     }
 }
+
+void SpectrumAccumulator::setTargetCount(int newTargetCount) {
+    if (m_activeAccumulationType != ActiveSpectrumType::TypeHwSpectrum) {
+        nucare::logW() << "SpectrumAccumulator: adjustTargetCount called but not in a count-based accumulation type (TypeHwSpectrum). ActiveType: " << static_cast<int>(m_activeAccumulationType);
+        return;
+    }
+
+    if (newTargetCount < 1) {
+        newTargetCount = 1;
+        nucare::logW() << "SpectrumAccumulator: Adjusted count resulted in less than 1, setting to 1.";
+    }
+    m_targetCountValue = newTargetCount;
+    nucare::logI() << "SpectrumAccumulator: Target count set to " << m_targetCountValue;
+
+    if (m_currentState == AccumulatorState::Measuring) {
+        if (m_currentResultSnapshot.hwSpectrum && m_currentResultSnapshot.hwSpectrum->getTotalCount() >= m_targetCountValue) {
+            nucare::logI() << "SpectrumAccumulator: Count adjustment resulted in target count already being met.";
+            internalStopAccumulation(true);
+        } else if (!m_currentResultSnapshot.hwSpectrum) {
+            nucare::logE() << "SpectrumAccumulator: adjustTargetCount: Snapshot HwSpectrum is null in Measuring state.";
+        }
+    }
+}

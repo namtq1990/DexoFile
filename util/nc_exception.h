@@ -16,7 +16,8 @@ Q_NAMESPACE
         NetworkError,
         DatabaseError,
         OperationFailed,
-        InvalidState
+        InvalidState,
+        AlgothrithmFailed
     };
 Q_ENUM_NS(ErrorCode)
 
@@ -76,6 +77,7 @@ class NetworkException : public NcException
 }  // namespace nucare
 
 #define NC_THROW(code, message) throw nucare::NcException::create(code, message, __FILE__, __LINE__);
+#define NC_THROW_ALG_ERROR(message) throw nucare::NcException::create(ErrorCode::AlgothrithmFailed, message, __FILE__, __LINE__);
 #define NC_THROW_ARG_ERROR(message) throw nucare::InvalidArgumentException(message, QString("%1:%2").arg(__FILE__).arg(__LINE__));
 #define NC_THROW_NETWORK_ERROR(message) throw nucare::NetworkException(message, QString("%1:%2").arg(__FILE__).arg(__LINE__));
 

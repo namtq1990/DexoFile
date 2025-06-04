@@ -64,6 +64,23 @@ union Package {
 
 static_assert (sizeof(Package::Payload) == sizeof (Package::Bytes), "Invalid size for package");
 
+struct UpdateCalibReq {
+    char Bytes[28];
+    struct Payload {
+        const char header[2] = {'C', 'L'};
+        uint16_t gain;
+        uint16_t temperature;
+        uint16_t ch32Kev;
+        uint16_t ch662Kev;
+        uint16_t chK40;
+        const uint16_t hvDac = 0;
+        const char padding[12] = {};
+        const char tail[2] = {'6', '6'};
+    } __attribute__((__packed__));
+};
+
+static_assert (sizeof (UpdateCalibReq) == 28, "Invalid size of message UpdateCalibReq.");
+
 constexpr char PACKAGE_HEADER[4] = {'U', 'U', 'D', '0'};
 constexpr char PACKAGE_TAIL[2] = {'6', '6'};
 
@@ -211,11 +228,11 @@ void DetectorComponent::initialize()
         NC_THROW_ARG_ERROR("Not found any data");
     }
 
-    m_properties->setBackgroundSpc(db->getBackgroundById(m_properties->getId()));
+    m_properties->setBackgroundSpc(db->getLatestBackground(m_properties->getId()));
 
     // Initilialize Calibration
     auto oldCalib = m_properties->getCalibration();
-    auto ret = db->getCalibrationById(m_properties->getId());
+    auto ret = db->getLatestCalibration(m_properties->getId());
     auto calibConfig = db->getDefaultDetectorConfig(m_properties->getId());
     if (ret == nullptr) {
 
@@ -293,7 +310,7 @@ void DetectorComponent::handleTimeout()
         }
 
         auto info = db->getLastDetector();
-        if (info) {
+        if (!info) {
             emit errorOccurred("Not found any detector");
             return;
         }
@@ -450,13 +467,16 @@ void DetectorComponent::processDetectorInfo(const QByteArray &data)
 
             m_properties->setSerial(gcResponse->serial);
             m_properties->setDetectorCode((DetectorCode_E) gcResponse->detType);
-            ComponentManager::instance().databaseManager()->getDetectorByCriteria(
+            auto det = ComponentManager::instance().databaseManager()->getDetectorByCriteria(
                         m_properties->getSerial(),
                         m_properties->info.model,
                         m_properties->info.probeType,
                         QString::number(m_properties->info.detectorCode->code),
                         QString::number(m_properties->info.detectorCode->cType)
                         );
+            if (det) {
+                m_properties->info = *det;
+            }
 
             initialize();
 
@@ -522,6 +542,21 @@ void DetectorComponent::sendStartCommand()
     m_commandState = SendingStart;
     sendCommand("A2");
     m_commandState = WaitingForStartResponse;
+}
+
+void DetectorComponent::sendUpdateCalib(const int ch32, const int ch662, const int chK40)
+{
+    logD() << "Sending update calib: " << ch32 << ',' << ch662 << ',' << chK40;
+
+    QByteArray buf(sizeof(UpdateCalibReq), 0);
+    auto payload = reinterpret_cast<UpdateCalibReq::Payload*>(buf.data());
+    payload->gain = htobe16(m_properties->getGC());
+    payload->temperature = htobe16(m_properties->getRawTemperature());
+    payload->ch32Kev = htobe16(ch32);
+    payload->ch662Kev = htobe16(ch662);
+    payload->chK40 = htobe16(chK40);
+
+    sendCommand(buf);
 }
 
 } // namespace nucare
