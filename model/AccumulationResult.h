@@ -13,6 +13,23 @@ struct AccumulationResult {
     double executionRealtimeSeconds;
     SpectrumAccumulator::AccumulationMode mode;
     bool primaryConditionMet;
+
+    qlonglong detectorId;
+    qlonglong backgroundId;
+    qlonglong calibrationId;
+
+    AccumulationResult()
+        : startTime(),
+          finishTime(),
+          totalCPS(0.0),
+          executionRealtimeSeconds(0.0),
+          mode(SpectrumAccumulator::AccumulationMode::ContinuousByTime), // Assuming this is a valid default
+          primaryConditionMet(false),
+          detectorId(-1),
+          backgroundId(-1),
+          calibrationId(-1) {
+        // accumulatedSpectrum is default constructed
+    }
 };
 
 #endif // ACCUMULATIONRESULT_H

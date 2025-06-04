@@ -5,6 +5,9 @@
 #include "model/Spectrum.h"           // For Spectrum_t and Spectrum aliases (includes HwSpectrum)
 #include "util/util.h"                // For nucare::logX
 #include "util/nc_exception.h"        // For NC_THROW_X
+#include "model/DetectorInfo.h"
+#include "model/Background.h"
+#include "model/Calibration.h"
 
 SpectrumAccumulator::SpectrumAccumulator(const Builder& builder, QObject* parent)
     : QObject(parent),
@@ -191,6 +194,42 @@ void SpectrumAccumulator::internalStopAccumulation(bool conditionMet) {
         nucare::logW() << "SpectrumAccumulator: No spectrum data in snapshot or type mismatch on stop. ActiveType: " << static_cast<int>(m_activeAccumulationType);
     }
     m_currentResultSnapshot.cps = (m_currentResultSnapshot.executionRealtimeSeconds > 0.00001) ? (finalTotalCount / m_currentResultSnapshot.executionRealtimeSeconds) : 0.0;
+
+    // Populate detector, background, and calibration IDs
+    auto ncManager = NcManager::instance();
+    if (ncManager) {
+        auto currentDetector = ncManager->detector();
+        if (currentDetector) {
+            m_currentResultSnapshot.detectorId = currentDetector->id();
+            nucare::logD() << "Set detectorId in AccumulationResult: " << m_currentResultSnapshot.detectorId;
+
+            if (currentDetector->background()) {
+                m_currentResultSnapshot.backgroundId = currentDetector->background()->id;
+                nucare::logD() << "Set backgroundId in AccumulationResult: " << m_currentResultSnapshot.backgroundId;
+            } else {
+                m_currentResultSnapshot.backgroundId = -1;
+                nucare::logW() << "No background data available for detector " << currentDetector->id() << ". Setting backgroundId to -1.";
+            }
+
+            if (currentDetector->calibration()) {
+                m_currentResultSnapshot.calibrationId = currentDetector->calibration()->id;
+                nucare::logD() << "Set calibrationId in AccumulationResult: " << m_currentResultSnapshot.calibrationId;
+            } else {
+                m_currentResultSnapshot.calibrationId = -1;
+                nucare::logW() << "No calibration data available for detector " << currentDetector->id() << ". Setting calibrationId to -1.";
+            }
+        } else {
+            m_currentResultSnapshot.detectorId = -1;
+            m_currentResultSnapshot.backgroundId = -1;
+            m_currentResultSnapshot.calibrationId = -1;
+            nucare::logW() << "NcManager has no current detector. Setting all IDs in AccumulationResult to -1.";
+        }
+    } else {
+        m_currentResultSnapshot.detectorId = -1;
+        m_currentResultSnapshot.backgroundId = -1;
+        m_currentResultSnapshot.calibrationId = -1;
+        nucare::logW() << "NcManager instance not found! Setting all IDs in AccumulationResult to -1.";
+    }
 
     nucare::logI() << "SpectrumAccumulator: Internal accumulation stopped. Condition met: " << conditionMet << ". Final CPS: " << m_currentResultSnapshot.cps;
     // No accumulationComplete signal. Clients observe state and call getCurrentAccumulationResult().

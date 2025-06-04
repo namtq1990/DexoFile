@@ -3,6 +3,13 @@
 #include "component/settingmanager.h"
 #include "component/SpectrumAccumulator.h"
 #include "util/util.h"
+#include "model/Event.h"
+#include "component/databasemanager.h"
+#include "component/componentmanager.h"
+#include "component/ncmanager.h"
+#include "model/DetectorInfo.h"
+#include "model/Background.h"
+#include "model/Calibration.h"
 using namespace navigation;
 
 void navigation::toHome(NavigationComponent* navController, NavigationEntry* entry, const QString& tag) {
@@ -120,6 +127,91 @@ void HomePage::stateChanged(AccumulatorState state)
     }
     case AccumulatorState::Completed: {
         ui->stateLabel->setText("State: Waiting");
+
+        // Retrieve accumulation result
+        auto ret = m_accumulator->getCurrentAccumulationResult();
+
+        // Create Event object
+        model::Event event;
+
+        // Populate Event object
+        event.setSoftwareVersion("1.0.0"); // Or a more appropriate version
+        event.setDateBegin(datetime::formatDate_yyyyMMdd_HHmmss(ret.startTime));
+        event.setDateFinish(datetime::formatDate_yyyyMMdd_HHmmss(ret.finishTime));
+        event.setLiveTime(ret.liveTime);
+        event.setRealTime(ret.realTime);
+        event.setAvgCps(ret.avgCPS);
+        event.setMaxCps(ret.maxCPS);
+        event.setMinCps(ret.minCPS);
+        event.setAvgGamma_nSv(0); // Default value
+        event.setMaxGamma_nSv(0); // Default value
+        event.setMinGamma_nSv(0); // Default value
+        event.setAvgFillCps(0);   // Default value
+
+        // Use IDs from AccumulationResult
+        event.setDetectorId(ret.detectorId);
+        event.setBackgroundId(ret.backgroundId);
+        event.setCalibrationId(ret.calibrationId);
+
+        if (ret.detectorId == -1) {
+            nucare::logW() << "Detector ID is -1 in accumulation result. Event might not be correctly associated.";
+        }
+        if (ret.backgroundId == -1) {
+            nucare::logW() << "Background ID is -1 in accumulation result.";
+        }
+        if (ret.calibrationId == -1) {
+            nucare::logW() << "Calibration ID is -1 in accumulation result.";
+        }
+
+        // Placeholder for detailId, will be updated later
+        event.setDetail_id(0);
+
+        // Spectrum data from ret.accumulatedSpectrum
+        // Assuming AccumulationResult has 'Spectrum accumulatedSpectrum;' and Spectrum has 'toString()'
+        QString spectrumStringData = ret.accumulatedSpectrum.toString();
+        if (spectrumStringData.isEmpty()) { // Adjust this check if toString() on empty spectrum is not empty string
+            nucare::logW() << "Accumulation result has empty spectrum data string.";
+        }
+
+        event.setE1Energy(0);     // Default value
+        event.setE1Branching(0);  // Default value
+        event.setE1Netcount(0);   // Default value
+        event.setE2Energy(0);     // Default value
+        event.setE2Branching(0);  // Default value
+        event.setE2Netcount(0);   // Default value
+
+        // Get DatabaseManager instance
+        auto dbManager = ComponentManager::instance()->getComponent<DatabaseManager>("DATABASE");
+
+        // Insert event data
+        if (dbManager) {
+            qlonglong eventId = dbManager->insertEvent(&event);
+            nucare::logI() << "Event inserted with ID:" << eventId;
+
+            if (eventId > 0 && !spectrumStringData.isEmpty()) {
+                qlonglong detailId = dbManager->insertEventDetail(eventId, spectrumStringData);
+                nucare::logI() << "Event detail inserted with ID:" << detailId;
+
+                if (detailId > 0) {
+                    bool updateSuccess = dbManager->updateEventDetailId(eventId, detailId);
+                    if (updateSuccess) {
+                        nucare::logI() << "Successfully updated event" << eventId << "with detail_id" << detailId;
+                    } else {
+                        nucare::logW() << "Failed to update event" << eventId << "with detail_id" << detailId;
+                    }
+                } else {
+                    nucare::logW() << "Failed to insert event_detail for event ID:" << eventId << "(detailId was" << detailId << ")";
+                }
+            } else {
+                nucare::logW() << "Skipping event_detail insertion due to invalid eventId or empty spectrum data for event ID:" << eventId;
+                if (spectrumStringData.isEmpty()) {
+                    nucare::logW() << "Spectrum string data was empty.";
+                }
+            }
+        } else {
+            nucare::logW() << "DatabaseManager not found!";
+        }
+
         break;
     }
     }

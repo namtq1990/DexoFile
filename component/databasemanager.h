@@ -55,8 +55,10 @@ public:
     int insertDetector(const DetectorInfo* detector);
     int insertBackground(const Background* background);
     int insertCalibration(const Calibration* calibration);
-    int insertEvent(const Event* event);
+    qlonglong insertEvent(const Event* event);
     int insertDetectorCalibConfig(const DetectorCalibConfig* config);
+    qlonglong insertEventDetail(qlonglong eventId, const QString& spectrumData);
+    bool updateEventDetailId(qlonglong eventId, qlonglong detailId);
 
     // Settings operations
     QVariant getSetting(const QString& name, const QVariant& defaultValue = QVariant());
