@@ -196,7 +196,7 @@ void SpectrumAccumulator::internalStopAccumulation(bool conditionMet) {
     m_currentResultSnapshot.cps = (m_currentResultSnapshot.executionRealtimeSeconds > 0.00001) ? (finalTotalCount / m_currentResultSnapshot.executionRealtimeSeconds) : 0.0;
 
     // Populate detector, background, and calibration IDs
-    auto ncManager = NcManager::instance();
+    auto ncManager = ComponentManager::instance().ncManager();
     if (ncManager) {
         auto currentDetector = ncManager->detector();
         if (currentDetector) {

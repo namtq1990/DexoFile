@@ -24,6 +24,8 @@ public:
 
 //    virtual void bindData(app::uc::meter::model::Data& data);
     void reloadLocal() override;
+    navigation::NavigationEntry* showInfo(const char* msg) override;
+    navigation::NavigationEntry* showError(const char* msg) override;
 
 public slots:
     void onRecvSpectrum();

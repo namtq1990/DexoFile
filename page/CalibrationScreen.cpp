@@ -105,6 +105,24 @@ void CalibrationScreen::reloadLocal()
     ui->retranslateUi(this);
 }
 
+navigation::NavigationEntry *CalibrationScreen::showInfo(const char *msg)
+{
+    auto entry = BaseScreen::showInfo(msg);
+    if (auto dlg = dynamic_cast<QDialog*>(entry->view)) {
+
+        auto action = [&]() { getNavigation()->pop(this, false); };
+        connect(dlg, &QDialog::accepted, this, action);
+        connect(dlg, &QDialog::rejected, this, action);
+    }
+
+    return entry;
+}
+
+navigation::NavigationEntry *CalibrationScreen::showError(const char *msg)
+{
+    return showInfo(msg);
+}
+
 void CalibrationScreen::onRecvSpectrum()
 {
     if (!m_counter) return;
@@ -127,12 +145,14 @@ void CalibrationScreen::onRecvResult()
 
     if (auto ncManager = ComponentManager::instance().ncManager()) {
         try {
-        auto& ret = m_counter->getCurrentAccumulationResult();
-        ncManager->computeCalibration(ncManager->getCurrentDetector(), ret.spectrum, ret.hwSpectrum,
-                                      m_mode, m_updateStdPeak);
+            auto& ret = m_counter->getCurrentAccumulationResult();
+
+            ncManager->computeCalibration(ncManager->getCurrentDetector(), ret.spectrum, ret.hwSpectrum,
+                                          m_mode, m_updateStdPeak);
+            showInfo("Calibration Saved");
         } catch (const nucare::NcException& e) {
             nucare::logE() << "Failed to calibration: " << e.toString();
-            showError(e.what());
+            showError(e.message().toLatin1());
         }
     }
 }

@@ -106,7 +106,7 @@ SubSettingItem* setting::buildSettingTree() {
                      },
                      ret))
                     ->setName("Calibration Count"),
-                (new InfoSettingItem(ret))->setName("Energy Calibration with Co60")->setClickAction("openCalibCo60"),
+                (new InfoSettingItem(ret))->setName("Energy Calibration with Cs137, Co60")->setClickAction("openCalibCo60"),
                 (new InfoSettingItem(ret))->setName("Energy Calibration with Cs137")->setClickAction("openCalibEstCs137"),
                 (new ChoiceSettingItem(
                      {
