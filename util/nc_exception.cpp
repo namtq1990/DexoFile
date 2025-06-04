@@ -34,7 +34,7 @@ QString NcException::toString() const {
     QMetaEnum metaEnum = QMetaEnum::fromType<ErrorCode>();
     QString errorCodeName = metaEnum.valueToKey(static_cast<int>(m_code));
 
-    QString str = QString("MySystemException: %1 (Code: %2)").arg(m_message).arg(errorCodeName);
+    QString str = QString("NcException: %1 (Code: %2)").arg(m_message).arg(errorCodeName);
 
     if (!m_context.isEmpty()) {
         str += QString(" Context: %1").arg(m_context);

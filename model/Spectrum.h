@@ -102,6 +102,9 @@ class Spectrum_t
         update();
     }
 
+    auto begin() { return m_data.begin(); }
+    auto end() { return m_data.end(); }
+
     Spectrum_t<Data, N> operator+(const Spectrum_t<Data, N>& spc) const {
         Spectrum_t<Data, N> result = *this;
         result.accumulate(spc);
@@ -254,6 +257,6 @@ class Spectrum_t
 };
 
 typedef Spectrum_t<float, nucare::CHSIZE> Spectrum;
-typedef Spectrum_t<int, nucare::HW_CHSIZE> HwSpectrum;
+typedef Spectrum_t<float, nucare::HW_CHSIZE> HwSpectrum;
 
 #endif /* INCLUDE_MODEL_SPECTRUM_H_ */

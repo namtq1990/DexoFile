@@ -5,6 +5,9 @@
 #include "model/Spectrum.h"           // For Spectrum_t and Spectrum aliases (includes HwSpectrum)
 #include "util/util.h"                // For nucare::logX
 #include "util/nc_exception.h"        // For NC_THROW_X
+#include "model/DetectorInfo.h"
+#include "model/Background.h"
+#include "model/Calibration.h"
 
 SpectrumAccumulator::SpectrumAccumulator(const Builder& builder, QObject* parent)
     : QObject(parent),
@@ -192,6 +195,42 @@ void SpectrumAccumulator::internalStopAccumulation(bool conditionMet) {
     }
     m_currentResultSnapshot.cps = (m_currentResultSnapshot.executionRealtimeSeconds > 0.00001) ? (finalTotalCount / m_currentResultSnapshot.executionRealtimeSeconds) : 0.0;
 
+    // Populate detector, background, and calibration IDs
+    auto ncManager = NcManager::instance();
+    if (ncManager) {
+        auto currentDetector = ncManager->detector();
+        if (currentDetector) {
+            m_currentResultSnapshot.detectorId = currentDetector->id();
+            nucare::logD() << "Set detectorId in AccumulationResult: " << m_currentResultSnapshot.detectorId;
+
+            if (currentDetector->background()) {
+                m_currentResultSnapshot.backgroundId = currentDetector->background()->id;
+                nucare::logD() << "Set backgroundId in AccumulationResult: " << m_currentResultSnapshot.backgroundId;
+            } else {
+                m_currentResultSnapshot.backgroundId = -1;
+                nucare::logW() << "No background data available for detector " << currentDetector->id() << ". Setting backgroundId to -1.";
+            }
+
+            if (currentDetector->calibration()) {
+                m_currentResultSnapshot.calibrationId = currentDetector->calibration()->id;
+                nucare::logD() << "Set calibrationId in AccumulationResult: " << m_currentResultSnapshot.calibrationId;
+            } else {
+                m_currentResultSnapshot.calibrationId = -1;
+                nucare::logW() << "No calibration data available for detector " << currentDetector->id() << ". Setting calibrationId to -1.";
+            }
+        } else {
+            m_currentResultSnapshot.detectorId = -1;
+            m_currentResultSnapshot.backgroundId = -1;
+            m_currentResultSnapshot.calibrationId = -1;
+            nucare::logW() << "NcManager has no current detector. Setting all IDs in AccumulationResult to -1.";
+        }
+    } else {
+        m_currentResultSnapshot.detectorId = -1;
+        m_currentResultSnapshot.backgroundId = -1;
+        m_currentResultSnapshot.calibrationId = -1;
+        nucare::logW() << "NcManager instance not found! Setting all IDs in AccumulationResult to -1.";
+    }
+
     nucare::logI() << "SpectrumAccumulator: Internal accumulation stopped. Condition met: " << conditionMet << ". Final CPS: " << m_currentResultSnapshot.cps;
     // No accumulationComplete signal. Clients observe state and call getCurrentAccumulationResult().
 
@@ -331,6 +370,29 @@ void SpectrumAccumulator::adjustTargetCount(int countDelta) {
     }
     m_targetCountValue = newTargetCount;
     nucare::logI() << "SpectrumAccumulator: Target count adjusted by " << countDelta << ". New target: " << m_targetCountValue;
+
+    if (m_currentState == AccumulatorState::Measuring) {
+        if (m_currentResultSnapshot.hwSpectrum && m_currentResultSnapshot.hwSpectrum->getTotalCount() >= m_targetCountValue) {
+            nucare::logI() << "SpectrumAccumulator: Count adjustment resulted in target count already being met.";
+            internalStopAccumulation(true);
+        } else if (!m_currentResultSnapshot.hwSpectrum) {
+            nucare::logE() << "SpectrumAccumulator: adjustTargetCount: Snapshot HwSpectrum is null in Measuring state.";
+        }
+    }
+}
+
+void SpectrumAccumulator::setTargetCount(int newTargetCount) {
+    if (m_activeAccumulationType != ActiveSpectrumType::TypeHwSpectrum) {
+        nucare::logW() << "SpectrumAccumulator: adjustTargetCount called but not in a count-based accumulation type (TypeHwSpectrum). ActiveType: " << static_cast<int>(m_activeAccumulationType);
+        return;
+    }
+
+    if (newTargetCount < 1) {
+        newTargetCount = 1;
+        nucare::logW() << "SpectrumAccumulator: Adjusted count resulted in less than 1, setting to 1.";
+    }
+    m_targetCountValue = newTargetCount;
+    nucare::logI() << "SpectrumAccumulator: Target count set to " << m_targetCountValue;
 
     if (m_currentState == AccumulatorState::Measuring) {
         if (m_currentResultSnapshot.hwSpectrum && m_currentResultSnapshot.hwSpectrum->getTotalCount() >= m_targetCountValue) {

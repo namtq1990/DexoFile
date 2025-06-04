@@ -5,7 +5,7 @@
 #include "Spectrum.h"
 
 struct DetectorCalibConfig {
-    std::shared_ptr<Spectrum> spc = nullptr;
+    std::shared_ptr<HwSpectrum> spc = nullptr;
     nucare::Timestamp time;
     Coeffcients calib;
     int detectorId = -1;

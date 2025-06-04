@@ -17,13 +17,33 @@
 #include <QSqlError>
 #include <QCoreApplication>
 #include <QSqlQuery>
-#include <QVariant> // For QVariant
+#include <QVariant>
+#include <QVariantMap>
 
 namespace nucare {
 
 DatabaseManager::DatabaseManager(QObject *parent)
     : QObject(parent), Component("DATABASE")
 {
+}
+
+bool DatabaseManager::executeQuery(QSqlQuery& query, const QString& context) {
+    QString sql = query.lastQuery();
+    for (const auto& key : query.boundValues().keys()) {
+        sql.replace(key, query.boundValue(key).toString());
+    }
+    
+    logD() << "Executing SQL [" << context << "]: " << sql;
+    
+    bool success = query.exec();
+    if (!success) {
+        logE() << "SQL execution failed [" << context << "]: " << query.lastError().text();
+        logE() << "Failed SQL: " << sql;
+    } else {
+        logD() << "SQL executed successfully [" << context << "]";
+    }
+    
+    return success;
 }
 
 DatabaseManager::~DatabaseManager()
@@ -107,78 +127,91 @@ bool DatabaseManager::createTablesIfNotExist()
     bool success = true;
 
     // detector table
-    success &= query.exec("CREATE TABLE IF NOT EXISTS detector ("
-                        "manufacturer TEXT, "
-                        "instrumentModel TEXT NOT NULL, "
-                        "serialNumber TEXT, "
-                        "detectorType TEXT, "
-                        "probeType TEXT, "
-                        "id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, "
-                        "detectorCode INTEGER NOT NULL DEFAULT 12, "
-                        "crystalType INTEGER NOT NULL DEFAULT 1)");
-    if (!success) logE() << query.lastError().text();
+    query.prepare("CREATE TABLE IF NOT EXISTS detector ("
+                  "manufacturer TEXT, "
+                  "instrumentModel TEXT NOT NULL, "
+                  "serialNumber TEXT, "
+                  "detectorType TEXT, "
+                  "probeType TEXT, "
+                  "id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, "
+                  "detectorCode INTEGER NOT NULL DEFAULT 12, "
+                  "crystalType INTEGER NOT NULL DEFAULT 1)");
+    success &= executeQuery(query, "Creating detector table");
+    // Redundant log removed: if (!success) logE() << query.lastError().text();
 
     // background table
-    success &= query.exec("CREATE TABLE IF NOT EXISTS background ("
-                        "id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, "
-                        "spectrum TEXT NOT NULL, "
-                        "acqTime INTEGER NOT NULL, "
-                        "realTime REAL NOT NULL, "
-                        "detectorId INTEGER, "
-                        "date TEXT)");
-    if (!success) logE() << query.lastError().text();
+    query.prepare("CREATE TABLE IF NOT EXISTS background ("
+                  "id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, "
+                  "spectrum TEXT NOT NULL, "
+                  "acqTime INTEGER NOT NULL, "
+                  "realTime REAL NOT NULL, "
+                  "detectorId INTEGER, "
+                  "date TEXT)");
+    success &= executeQuery(query, "Creating background table");
+    // Redundant log removed: if (!success) logE() << query.lastError().text();
 
     // calibration table
-    success &= query.exec("CREATE TABLE IF NOT EXISTS calibration ("
-                        "id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, "
-                        "detector_id INTEGER NOT NULL DEFAULT -1, "
-                        "coef_a INTEGER NOT NULL, "
-                        "coef_b INTEGER NOT NULL, "
-                        "coef_c INTEGER NOT NULL, "
-                        "gc INTEGER, "
-                        "ratio REAL NOT NULL DEFAULT 1.0, "
-                        "spectrum TEXT, " // For debugging, not loaded into model
-                        "chpeak_a REAL, "
-                        "chpeak_b REAL, "
-                        "chpeak_c REAL, "
-                        "time TEXT, "
-                        "temperature REAL)");
-    if (!success) logE() << query.lastError().text();
+    query.prepare("CREATE TABLE IF NOT EXISTS calibration ("
+                  "id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, "
+                  "detector_id INTEGER NOT NULL DEFAULT -1, "
+                  "coef_a INTEGER NOT NULL, "
+                  "coef_b INTEGER NOT NULL, "
+                  "coef_c INTEGER NOT NULL, "
+                  "gc INTEGER, "
+                  "ratio REAL NOT NULL DEFAULT 1.0, "
+                  "spectrum TEXT, " // For debugging, not loaded into model
+                  "chpeak_a REAL, "
+                  "chpeak_b REAL, "
+                  "chpeak_c REAL, "
+                  "time TEXT, "
+                  "temperature REAL)");
+    success &= executeQuery(query, "Creating calibration table");
+    // Redundant log removed: if (!success) logE() << query.lastError().text();
 
     // event table
-    success &= query.exec("CREATE TABLE IF NOT EXISTS event ("
-                        "event_id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, "
-                        "softwareVersion TEXT NOT NULL DEFAULT '1.0.0', "
-                        "dateBegin TEXT, "
-                        "dateFinish TEXT, "
-                        "liveTime REAL, "
-                        "realTime REAL, "
-                        "avgGamma_nSv REAL, "
-                        "maxGamma_nSv REAL, "
-                        "minGamma_nSv REAL, "
-                        "avgFillCps REAL, "
-                        "detectorId INTEGER, "
-                        "detail_id INTEGER, "
-                        "background_id INTEGER, "
-                        "calibration_id INTEGER, "
-                        "avgCps REAL NOT NULL DEFAULT 0, "
-                        "maxCps REAL NOT NULL DEFAULT 0, "
-                        "minCps REAL NOT NULL DEFAULT 0, "
-                        "e1Energy NUMERIC NOT NULL DEFAULT 0, "
-                        "e1Branching NUMERIC NOT NULL DEFAULT 0, "
-                        "e1Netcount NUMERIC NOT NULL DEFAULT 0, "
-                        "e2Energy NUMERIC NOT NULL DEFAULT 0, "
-                        "e2Branching NUMERIC NOT NULL DEFAULT 0, "
-                        "e2Netcount NUMERIC NOT NULL DEFAULT 0)");
-    if (!success) logE() << query.lastError().text();
+    query.prepare("CREATE TABLE IF NOT EXISTS event ("
+                  "event_id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, "
+                  "softwareVersion TEXT NOT NULL DEFAULT '1.0.0', "
+                  "dateBegin TEXT, "
+                  "dateFinish TEXT, "
+                  "liveTime REAL, "
+                  "realTime REAL, "
+                  "avgGamma_nSv REAL, "
+                  "maxGamma_nSv REAL, "
+                  "minGamma_nSv REAL, "
+                  "avgFillCps REAL, "
+                  "detectorId INTEGER, "
+                  "detail_id INTEGER, "
+                  "background_id INTEGER, "
+                  "calibration_id INTEGER, "
+                  "avgCps REAL NOT NULL DEFAULT 0, "
+                  "maxCps REAL NOT NULL DEFAULT 0, "
+                  "minCps REAL NOT NULL DEFAULT 0, "
+                  "e1Energy NUMERIC NOT NULL DEFAULT 0, "
+                  "e1Branching NUMERIC NOT NULL DEFAULT 0, "
+                  "e1Netcount NUMERIC NOT NULL DEFAULT 0, "
+                  "e2Energy NUMERIC NOT NULL DEFAULT 0, "
+                  "e2Branching NUMERIC NOT NULL DEFAULT 0, "
+                  "e2Netcount NUMERIC NOT NULL DEFAULT 0)");
+    success &= executeQuery(query, "Creating event table");
+    // Redundant log removed: if (!success) logE() << query.lastError().text();
 
     // event_detail table (for lazy load)
-    success &= query.exec("CREATE TABLE IF NOT EXISTS event_detail ("
-                        "id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, "
-                        "spectrum TEXT, "
-                        "event_id INTEGER, "
-                        "FOREIGN KEY(event_id) REFERENCES event(event_id) ON DELETE CASCADE ON UPDATE CASCADE)");
-    if (!success) logE() << query.lastError().text();
+    query.prepare("CREATE TABLE IF NOT EXISTS event_detail ("
+                  "id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, "
+                  "spectrum TEXT, "
+                  "event_id INTEGER, "
+                  "FOREIGN KEY(event_id) REFERENCES event(event_id) ON DELETE CASCADE ON UPDATE CASCADE)");
+    success &= executeQuery(query, "Creating event_detail table");
+    // Redundant log removed: if (!success) logE() << query.lastError().text();
+
+    // setup table
+    query.prepare("CREATE TABLE IF NOT EXISTS setup ("
+                  "Name TEXT NOT NULL UNIQUE, "
+                  "Value TEXT, "
+                  "PRIMARY KEY(Name))");
+    success &= executeQuery(query, "Creating setup table");
+    // Redundant log removed: if (!success) logE() << query.lastError().text();
 
     return success;
 }
@@ -189,8 +222,8 @@ std::shared_ptr<DetectorInfo> DatabaseManager::getDetectorById(int id)
     query.prepare("SELECT id, manufacturer, instrumentModel, serialNumber, detectorType, probeType, detectorCode, crystalType FROM detector WHERE id = :id");
     query.bindValue(":id", id);
 
-    if (!query.exec()) {
-        logE() << query.lastError().text();
+    if (!executeQuery(query, "Fetching detector by ID")) {
+        // Redundant log removed: logE() << query.lastError().text();
         return nullptr;    }
 
     if (query.next()) {
@@ -225,8 +258,8 @@ void DatabaseManager::loadEventDetailsInto(Event* event)
     query.prepare("SELECT spectrum FROM event_detail WHERE id = :detail_id");
     query.bindValue(":detail_id", static_cast<qlonglong>(detailId));
 
-    if (!query.exec()) {
-        logE() << "Failed to query event_detail for event ID" << event->getId() << ":" << query.lastError().text();
+    if (!executeQuery(query, "Fetching event spectrum from event_detail")) {
+        // Redundant log removed. Original: logE() << "Failed to query event_detail for event ID" << event->getId() << ":" << query.lastError().text();
         return;
     }
 
@@ -266,8 +299,8 @@ std::shared_ptr<DetectorInfo> DatabaseManager::getDetectorByCriteria(
     query.bindValue(":detectorCode", static_cast<int>(detCodeEnum));
     query.bindValue(":crystalType", static_cast<int>(crystalTypeEnum));
 
-    if (!query.exec()) {
-        logE() << query.lastError().text();
+    if (!executeQuery(query, "Fetching detector by criteria")) {
+        // Redundant log removed: logE() << query.lastError().text();
         return nullptr;
     }
 
@@ -294,8 +327,8 @@ std::shared_ptr<DetectorInfo> DatabaseManager::getDetectorByCriteria(
     query.bindValue(":detectorCode", static_cast<int>(detCodeEnum));
     query.bindValue(":crystalType", static_cast<int>(crystalTypeEnum));
 
-    if (!query.exec()) {
-        logE() << query.lastError().text();
+    if (!executeQuery(query, "Inserting new detector after criteria search failed")) {
+        // Redundant log removed: logE() << query.lastError().text();
         return nullptr;
     }
 
@@ -314,8 +347,8 @@ std::shared_ptr<DetectorInfo> DatabaseManager::getLastDetector()
                  "ORDER BY id DESC LIMIT 1"); // Order by id DESC as created_at is not in schema
     query.bindValue(":gp_code", static_cast<int>(NaI_2x2_GP));
 
-    if (!query.exec()) {
-        logE() << query.lastError().text();
+    if (!executeQuery(query, "Fetching last detector")) {
+        // Redundant log removed: logE() << query.lastError().text();
         return nullptr;
     }
 
@@ -340,8 +373,8 @@ std::shared_ptr<Background> DatabaseManager::getBackgroundById(int id)
     query.prepare("SELECT id, spectrum, acqTime, realTime, detectorId, date FROM background WHERE id = :id");
     query.bindValue(":id", id);
 
-    if (!query.exec()) {
-        logE() << query.lastError().text();
+    if (!executeQuery(query, "Fetching background by ID")) {
+        // Redundant log removed: logE() << query.lastError().text();
         return nullptr;
     }
 
@@ -370,8 +403,8 @@ std::shared_ptr<Calibration> DatabaseManager::getCalibrationById(int id)
     query.prepare("SELECT id, detector_id, coef_a, coef_b, coef_c, gc, ratio, chpeak_a, chpeak_b, chpeak_c, time, temperature FROM calibration WHERE id = :id");
     query.bindValue(":id", id);
 
-    if (!query.exec()) {
-        logE() << query.lastError().text();
+    if (!executeQuery(query, "Fetching calibration by ID")) {
+        // Redundant log removed: logE() << query.lastError().text();
         return nullptr;
     }
 
@@ -415,8 +448,8 @@ std::vector<std::shared_ptr<Event>> DatabaseManager::getEvents(int page, int pag
     query.bindValue(":limit", pageSize);
     query.bindValue(":offset", (page - 1) * pageSize);
 
-    if (!query.exec()) {
-        logE() << query.lastError().text();
+    if (!executeQuery(query, "Fetching events with pagination")) {
+        // Redundant log removed: logE() << query.lastError().text();
         return events;
     }
 
@@ -457,8 +490,8 @@ std::shared_ptr<Event> DatabaseManager::getEventDetails(int id)
     query.prepare("SELECT event_id, softwareVersion, dateBegin, dateFinish, liveTime, realTime, avgGamma_nSv, maxGamma_nSv, minGamma_nSv, avgFillCps, detectorId, detail_id, background_id, calibration_id, avgCps, maxCps, minCps, e1Energy, e1Branching, e1Netcount, e2Energy, e2Branching, e2Netcount FROM event WHERE event_id = :id");
     query.bindValue(":id", id);
 
-    if (!query.exec()) {
-        logE() << query.lastError().text();
+    if (!executeQuery(query, "Fetching event details by ID")) {
+        // Redundant log removed: logE() << query.lastError().text();
         return nullptr;
     }
 
@@ -499,8 +532,8 @@ std::shared_ptr<DetectorCalibConfig> DatabaseManager::getDefaultDetectorConfig(c
     QSqlQuery query(m_database);
     query.prepare(cmd);
     query.bindValue(":detId", detId);
-    if (!query.exec()) {
-        logE() << query.lastError().text();
+    if (!executeQuery(query, "Fetching default detector config")) {
+        // Redundant log removed: logE() << query.lastError().text();
         return nullptr;
     }
 
@@ -539,8 +572,8 @@ int DatabaseManager::insertDetector(const DetectorInfo* detector)
     query.bindValue(":detectorCode", static_cast<int>(detector->detectorCode->code));
     query.bindValue(":crystalType", static_cast<int>(detector->detectorCode->cType));
 
-    if (!query.exec()) {
-        logE() << query.lastError().text();
+    if (!executeQuery(query, "Inserting new detector")) {
+        // Redundant log removed: logE() << query.lastError().text();
         return -1; // Indicate failure
     }
     return query.lastInsertId().toInt();
@@ -563,8 +596,8 @@ int DatabaseManager::insertBackground(const Background* background)
     query.bindValue(":detectorId", background->spc ? background->spc->getDetectorID() : -1);
     query.bindValue(":date", background->date);
 
-    if (!query.exec()) {
-        logE() << query.lastError().text();
+    if (!executeQuery(query, "Inserting new background")) {
+        // Redundant log removed: logE() << query.lastError().text();
         return -1;
     }
     return query.lastInsertId().toInt();
@@ -591,14 +624,14 @@ int DatabaseManager::insertCalibration(const Calibration* calibration)
     // No spectrum binding for calibration as per user feedback
     // query.bindValue(":spectrum", spectrumData);
 
-    if (!query.exec()) {
-        logE() << query.lastError().text();
+    if (!executeQuery(query, "Inserting new calibration")) {
+        // Redundant log removed: logE() << query.lastError().text();
         return -1;
     }
     return query.lastInsertId().toInt();
 }
 
-int DatabaseManager::insertEvent(const Event* event)
+qlonglong DatabaseManager::insertEvent(const Event* event)
 {
     QSqlQuery query(m_database);
     query.prepare("INSERT INTO event (softwareVersion, dateBegin, dateFinish, liveTime, realTime, avgGamma_nSv, maxGamma_nSv, minGamma_nSv, avgFillCps, detectorId, detail_id, background_id, calibration_id, avgCps, maxCps, minCps, e1Energy, e1Branching, e1Netcount, e2Energy, e2Branching, e2Netcount) "
@@ -627,11 +660,181 @@ int DatabaseManager::insertEvent(const Event* event)
     query.bindValue(":e2Branching", event->getE2Branching());
     query.bindValue(":e2Netcount", event->getE2Netcount());
 
-    if (!query.exec()) {
-        logE() << query.lastError().text();
+    if (!executeQuery(query, "Inserting new event")) {
+        // Redundant log removed: logE() << query.lastError().text();
         return -1;
     }
-    return query.lastInsertId().toInt();
+    return query.lastInsertId().toLongLong();
+}
+
+qlonglong DatabaseManager::insertEventDetail(qlonglong eventId, const QString& spectrumData)
+{
+    QSqlQuery query(m_database);
+    query.prepare("INSERT INTO event_detail (event_id, spectrum) VALUES (:event_id, :spectrum)");
+    query.bindValue(":event_id", eventId);
+    query.bindValue(":spectrum", spectrumData);
+
+    if (!executeQuery(query, "Inserting event detail")) {
+        // executeQuery already logs the error
+        return -1;
+    }
+    return query.lastInsertId().toLongLong();
+}
+
+bool DatabaseManager::updateEventDetailId(qlonglong eventId, qlonglong detailId)
+{
+    QSqlQuery query(m_database);
+    query.prepare("UPDATE event SET detail_id = :detail_id WHERE event_id = :event_id");
+    query.bindValue(":detail_id", detailId);
+    query.bindValue(":event_id", eventId);
+
+    if (!executeQuery(query, "Updating event detail_id")) {
+        // executeQuery already logs the error
+        return false;
+    }
+    return true;
+}
+
+int DatabaseManager::insertDetectorCalibConfig(const DetectorCalibConfig* config)
+{
+    QSqlQuery query(m_database);
+    // Use INSERT OR REPLACE to update if detectorId exists, otherwise insert
+    query.prepare("INSERT OR REPLACE INTO detector_config (detectorId, chPeakA, chPeakB, chPeakC, Time, Spectrum) "
+                 "VALUES (:detectorId, :chPeakA, :chPeakB, :chPeakC, :Time, :Spectrum)");
+    
+    query.bindValue(":detectorId", config->detectorId);
+    query.bindValue(":chPeakA", config->calib[0]);
+    query.bindValue(":chPeakB", config->calib[1]);
+    query.bindValue(":chPeakC", config->calib[2]);
+    query.bindValue(":Time", config->time.toString(Qt::ISODate));
+    
+    QByteArray spectrumData;
+    if (config->spc) {
+        spectrumData = config->spc->toString().toUtf8();
+    }
+    query.bindValue(":Spectrum", spectrumData);
+
+    if (!executeQuery(query, "Inserting or replacing detector calib config")) {
+        // Redundant log removed. Original: logE() << "Failed to insert/replace DetectorCalibConfig:" << query.lastError().text();
+        return -1;
+    }
+    return query.lastInsertId().toInt(); // Returns the rowid of the last inserted row
+}
+
+QSqlQuery DatabaseManager::executeSingleRowQuery(const QString& queryString, const QVariantMap& bindValues)
+{
+    QSqlQuery query(m_database);
+    query.prepare(queryString);
+    for (auto it = bindValues.constBegin(); it != bindValues.constEnd(); ++it) {
+        query.bindValue(it.key(), it.value());
+    }
+
+    if (!executeQuery(query, queryString)) { // Using queryString as context, can be improved
+        // Redundant log removed. Original: logE() << "SQL Query failed:" << query.lastError().text() << "Query:" << queryString;
+        // executeQuery already logs the error, the context (which is the queryString here), and the bound query.
+    }
+    return query;
+}
+
+std::shared_ptr<Background> DatabaseManager::getLatestBackground(int detectorId)
+{
+    QString queryString = "SELECT id, spectrum, acqTime, realTime, detectorId, date FROM background WHERE detectorId = :detectorId ORDER BY date DESC LIMIT 1";
+    QVariantMap bindValues;
+    bindValues[":detectorId"] = detectorId;
+
+    QSqlQuery query = executeSingleRowQuery(queryString, bindValues); // This call doesn't need to change if executeSingleRowQuery handles executeQuery
+
+    if (query.next()) {
+        auto background = std::make_shared<Background>();
+        background->id = query.value("id").toInt();
+
+        QString spectrumDataStr = query.value("spectrum").toString();
+        auto spectrum = std::shared_ptr<Spectrum>(Spectrum::pFromString(spectrumDataStr));
+        
+        spectrum->setAcqTime(query.value("acqTime").toInt());
+        spectrum->setRealTime(query.value("realTime").toDouble());
+        spectrum->setDetectorID(query.value("detectorId").toInt());
+        
+        background->spc = spectrum;
+        background->date = query.value("date").toString();
+        return background;
+    }
+
+    return nullptr;
+}
+
+std::shared_ptr<Calibration> DatabaseManager::getLatestCalibration(int detectorId)
+{
+    QString queryString = "SELECT id, detector_id, coef_a, coef_b, coef_c, gc, ratio, chpeak_a, chpeak_b, chpeak_c, time, temperature FROM calibration WHERE detector_id = :detector_id ORDER BY time DESC LIMIT 1";
+    QVariantMap bindValues;
+    bindValues[":detector_id"] = detectorId;
+
+    QSqlQuery query = executeSingleRowQuery(queryString, bindValues);
+
+    if (query.next()) {
+        auto calibration = std::make_shared<Calibration>();
+        calibration->setId(query.value("id").toInt());
+        calibration->setDetectorId(query.value("detector_id").toInt());
+        
+        Coeffcients coefficients;
+        coefficients[0] = query.value("coef_a").toDouble();
+        coefficients[1] = query.value("coef_b").toDouble();
+        coefficients[2] = query.value("coef_c").toDouble();
+        calibration->setCoefficients(coefficients);
+
+        calibration->setGC(query.value("gc").toInt());
+        calibration->setRatio(query.value("ratio").toDouble());
+
+        Coeffcients chPeaks;
+        chPeaks[0] = query.value("chpeak_a").toDouble();
+        chPeaks[1] = query.value("chpeak_b").toDouble();
+        chPeaks[2] = query.value("chpeak_c").toDouble();
+        calibration->setChCoefficients(chPeaks);
+
+        calibration->setDate(nucare::Timestamp::fromString(query.value("time").toString(), Qt::ISODate));
+        calibration->setTemperature(query.value("temperature").toDouble());
+        
+        return calibration;
+    }
+
+    return nullptr;
+}
+
+QVariant DatabaseManager::getSetting(const QString& name, const QVariant& defaultValue) {
+    QSqlQuery query(m_database);
+    query.prepare("SELECT Value FROM setup WHERE Name = ?");
+    query.addBindValue(name);
+    
+    if (executeQuery(query, "Getting setting by name") && query.next()) {
+        return query.value(0);
+    }
+    return defaultValue;
+}
+
+void DatabaseManager::setSetting(const QString& name, const QVariant& value) {
+    QSqlQuery query;
+    query.prepare("INSERT OR REPLACE INTO setup (Name, Value) VALUES (?, ?)");
+    query.addBindValue(name);
+    query.addBindValue(value.toString());
+    
+    if (!executeQuery(query, "Saving setting: " + name)) {
+        // Redundant log removed. Original: logE() << "Failed to save setting:" << name << query.lastError();
+        // executeQuery logs the error, context ("Saving setting: [name]"), and the SQL.
+    }
+}
+
+QMap<QString, QVariant> DatabaseManager::getAllSettings() {
+    QMap<QString, QVariant> settings;
+    QSqlQuery query(m_database); // Ensure query is associated with the database
+    query.prepare("SELECT Name, Value FROM setup");
+    
+    if (executeQuery(query, "Getting all settings")) {
+        while (query.next()) {
+            settings.insert(query.value(0).toString(), query.value(1));
+        }
+    }
+    
+    return settings;
 }
 
 } // namespace nucare

@@ -34,6 +34,7 @@ public:
     void sendCommand(const QByteArray &command);
 
     void initialize();
+    void sendUpdateCalib(const int ch32, const int ch662, const int chK40);
 
 signals:
     void detectorInfoReceived(DetectorComponent* dev, std::shared_ptr<GcResponse> info);

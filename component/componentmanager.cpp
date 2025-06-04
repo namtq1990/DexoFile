@@ -4,6 +4,7 @@
 #include "component/detectorcomponent.h" // Include DetectorComponent
 #include "component/ncmanager.h" // Include NcManager
 #include "component/databasemanager.h" // Include DatabaseManager
+#include "component/settingmanager.h"
 #include "controller/platform_controller.h"
 #include "../thememanager.h"
 #include "util/nc_exception.h"
@@ -73,6 +74,7 @@ void ComponentManager::initializeComponents(QObject* parent)
     initializeInputComponent(parent);
     initializePlatformController(parent);
     initializeDatabaseManager(parent);
+    initializeSettingManager(parent);
     initializeWiFiService(parent);
     initializeDetectorComponent(parent); // Initialize DetectorComponent with parent
     initializeNcManager(parent); // Initialize NcManager
@@ -181,6 +183,15 @@ void ComponentManager::initializeDatabaseManager(QObject* parent)
     }
 }
 
+void ComponentManager::initializeSettingManager(QObject *parent)
+{
+    if (!m_settingManager) {
+        m_settingManager = QPointer<setting::SettingManager>(new setting::SettingManager(parent));
+        m_settingManager->initialize();
+        logI() << "SettingManager initialized.";
+    }
+}
+
 NavigationComponent* ComponentManager::navigationComponent() const
 {
     if (!m_navigationComponent) {
@@ -221,6 +232,11 @@ QPointer<nucare::DatabaseManager> ComponentManager::databaseManager() const
         logE() << "DatabaseManager accessed before initialization!";
     }
     return m_databaseManager;
+}
+
+QPointer<setting::SettingManager> ComponentManager::settingManager() const
+{
+    return m_settingManager;
 }
 
 QString ComponentManager::dataDir() const { return mDataDir; }

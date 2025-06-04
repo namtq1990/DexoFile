@@ -39,9 +39,11 @@ public:
 
     // Background operations
     std::shared_ptr<Background> getBackgroundById(int id);
+    std::shared_ptr<Background> getLatestBackground(int detectorId); // Added this line
 
     // Calibration operations
     std::shared_ptr<Calibration> getCalibrationById(int id);
+    std::shared_ptr<Calibration> getLatestCalibration(int detectorId);
 
     // Event operations
     std::vector<std::shared_ptr<Event>> getEvents(int page, int pageSize);
@@ -53,11 +55,23 @@ public:
     int insertDetector(const DetectorInfo* detector);
     int insertBackground(const Background* background);
     int insertCalibration(const Calibration* calibration);
-    int insertEvent(const Event* event);
+    qlonglong insertEvent(const Event* event);
+    int insertDetectorCalibConfig(const DetectorCalibConfig* config);
+    qlonglong insertEventDetail(qlonglong eventId, const QString& spectrumData);
+    bool updateEventDetailId(qlonglong eventId, qlonglong detailId);
+
+    // Settings operations
+    QVariant getSetting(const QString& name, const QVariant& defaultValue = QVariant());
+    void setSetting(const QString& name, const QVariant& value);
+    QMap<QString, QVariant> getAllSettings();
 
 private:
     QSqlDatabase m_database;
     QString m_dataDirPath;
+
+    // Helper for executing queries and fetching a single row
+    QSqlQuery executeSingleRowQuery(const QString& queryString, const QVariantMap& bindValues);
+    bool executeQuery(QSqlQuery& query, const QString& context);
 
     bool deployDatabase(const QString& sourcePath, const QString& destinationPath);
     bool createTablesIfNotExist();

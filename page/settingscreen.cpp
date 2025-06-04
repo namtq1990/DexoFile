@@ -147,9 +147,14 @@ void SettingScreen::openBackground(BaseSettingItem *)
     navigation::toBackground(this);
 }
 
-void SettingScreen::openCalibration(BaseSettingItem *item)
+void SettingScreen::openCalibCo60(BaseSettingItem *item)
 {
-    navigation::toCalibration(this);
+    navigation::toCalibration(this, Calibration::SPRD_CO_60);
+}
+
+void SettingScreen::openCalibEstCs137(std::shared_ptr<BaseSettingItem> item)
+{
+    navigation::toCalibration(this, Calibration::SPRD_CS_137);
 }
 
 void SettingScreen::openSwVersion(BaseSettingItem *item)

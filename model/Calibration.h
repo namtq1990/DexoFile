@@ -18,7 +18,7 @@ private:
     Coeffcients mCoefficients;
     Coeffcients mStdPeaks;
     Coeffcients mChCoefficients;
-    std::shared_ptr<Spectrum> mSpc = nullptr;
+    std::shared_ptr<HwSpectrum> mSpc = nullptr;
     nucare::Timestamp mDate;
     double mTemperature;
     double mRatio;
@@ -39,8 +39,8 @@ public:
     int getGC() const { return mGC; } // Made const, explicit return type
     inline void setRatio(const double ratio) { mRatio = ratio; }
     nucare::Timestamp getDate() const { return mDate; } // Made const, explicit return type
-    const std::shared_ptr<Spectrum> &spc() const;
-    void setSpc(const std::shared_ptr<Spectrum> &newSpc);
+    const std::shared_ptr<HwSpectrum> &spc() const;
+    void setSpc(std::shared_ptr<HwSpectrum> newSpc);
     double temperature() const;
     void setTemperature(double newTemperature);
     void setGC(int newGC);
