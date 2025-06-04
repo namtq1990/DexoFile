@@ -33,6 +33,6 @@ typedef std::vector<double> Vec1D;
 typedef std::vector<Vec1D> Vec2D;
 
 #include "model/Time.h"
-// #include "DetectorCode.h"
+ #include "DetectorCode.h"
 
 #endif // TYPES_H

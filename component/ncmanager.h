@@ -25,6 +25,8 @@ public:
                                 Calibration::Mode mode = Calibration::HH300_CS_137,
                                 bool updateStdPeaks = false);
 
+    nucare::DetectorComponent* getCurrentDetector();
+
 public slots:
     void onRecvPackage(nucare::DetectorComponent* dev, std::shared_ptr<DetectorPackage> pkg);
     void onRecvGC(nucare::DetectorComponent* dev, std::shared_ptr<GcResponse> message);

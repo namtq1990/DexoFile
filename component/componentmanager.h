@@ -18,6 +18,7 @@ class NcManager; // Forward declaration for NcManager
 class QStackedWidget;
 class QObject;
 class PlatformController;
+namespace setting { class SettingManager; }
 
 class ComponentManager : virtual public Component
 {
@@ -38,6 +39,7 @@ public:
     void initializeDetectorComponent(QObject* parent = nullptr); // Declare initializeDetectorComponent
     void initializeNcManager(QObject* parent = nullptr); // Declare initializeNcManager
     void initializeDatabaseManager(QObject* parent = nullptr); // Declare initializeDatabaseManager
+    void initializeSettingManager(QObject* parent = nullptr);
 
     navigation::NavigationComponent* navigationComponent() const;
     ThemeManager* themeManager() const;
@@ -47,6 +49,7 @@ public:
     PlatformController* platformController() const;
     WiFiService* wifiService() const;
     QPointer<nucare::DatabaseManager> databaseManager() const; // Getter for DatabaseManager
+    QPointer<setting::SettingManager> settingManager() const;
     QString dataDir() const;
 
     // Delete copy constructor and assignment operator
@@ -61,6 +64,7 @@ private:
     QScopedPointer<nucare::InputComponent> m_inputComponent; // Member for nucare::InputComponent
     QPointer<nucare::DetectorComponent> m_detectorComponent; // Member for DetectorComponent
     QPointer<nucare::DatabaseManager> m_databaseManager; // Member for DatabaseManager
+    QPointer<setting::SettingManager> m_settingManager;
     QSharedPointer<NcManager> m_ncManager; // Member for NcManager
     PlatformController* m_platformController = nullptr;
     WiFiService* m_wifiService = nullptr;

@@ -26,10 +26,6 @@ public:
                                         const Threshold& theshold1,
                                         const int MaxDist2Peaks = 1);
 
-    static std::list<int> PeakSearch_Co60(const Spectrum* in, const FWHM& fwhm, const Coeffcients& coeff,
-                                                       const double thshold, const Threshold& thsholdK40,
-                                                       const Threshold& theshold1,
-                                                       const int MaxDist2Peaks);
     /**
      * @brief PeakSearch_Hight  Searching for K40 list peak, call to @ref PeakSearch_V1 3 times, with different
      * sigma threshold to get value. => Hight performance, but more precise

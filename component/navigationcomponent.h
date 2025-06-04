@@ -14,6 +14,7 @@
 #include "config.h"
 #include "base/baseview.h"
 #include "component/component.h"
+#include "model/Calibration.h"
 
 class BaseView;
 class SubSettingItem;
@@ -175,7 +176,10 @@ void toHome(NavigationComponent* navController, NavigationEntry* entry, const QS
 void toSetting(NavigationComponent* navController, NavigationEntry* entry, SubSettingItem* args,
                const QString& tag = tag::SETTING_TAG);
 void toBackground(NavigationComponent* navController, NavigationEntry* entry, const QString& tag = tag::SETTING_TAG);
-void toCalibration(NavigationComponent* navController, NavigationEntry* entry, const QString& tag = tag::CALIBRATION_TAG);
+void toCalibration(NavigationComponent* navController, NavigationEntry* entry,
+                   Calibration::Mode mode,
+                   bool updateStdPeak = false,
+                   const QString& tag = tag::CALIBRATION_TAG);
 void toSpectrumViewer(NavigationComponent* navController, NavigationEntry* entry,
                       std::shared_ptr<SpectrumAccumulator> accumulator,
                       const QString& tag = tag::SPECTRUMVIEW_TAG);
@@ -186,7 +190,10 @@ void toChoiceDlg(NavigationComponent* navController,
 
 NavigationEntry* toChoiceDlg(BaseView* parent, ChoicesDialogArgs* args);
 NavigationEntry* toBackground(BaseView* parent);
-NavigationEntry* toCalibration(BaseView* parent);
+NavigationEntry* toCalibration(BaseView* parent,
+                               Calibration::Mode mode,
+                               bool updateStdPeak = false);
+NavigationEntry* toCalibCountDlg(BaseView* parent, const QString& = tag::CHOICE_TAG);
 NavigationEntry* toSpectrumViewer(BaseView* parent, std::shared_ptr<SpectrumAccumulator> accumulator);
 
 void showWarning(NavigationComponent* navController,

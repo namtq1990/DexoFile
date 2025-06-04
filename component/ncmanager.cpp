@@ -1,7 +1,9 @@
 #include "ncmanager.h"
 #include "model/Calibration.h"
 #include "model/DetectorProp.h"
+#include "model/DetectorCalibConfig.h"
 #include "detectorcomponent.h"
+#include "componentmanager.h"
 #include "util/NcLibrary.h"
 
 using namespace nucare;
@@ -50,9 +52,90 @@ void NcManager::updateCalibFromRawPeak(Calibration *calib, const Coeffcients &fo
     calib->setDate(nucare::Timestamp());
 }
 
-void NcManager::computeCalibration(nucare::DetectorComponent *dev, std::shared_ptr<Spectrum> spc, std::shared_ptr<HwSpectrum> hwSpc, Calibration::Mode mode, bool updateStdPeaks)
+void NcManager::computeCalibration(nucare::DetectorComponent *dev, std::shared_ptr<Spectrum> spc,
+                                   std::shared_ptr<HwSpectrum> hwSpc, Calibration::Mode mode, bool updateStdPeaks)
 {
+    auto prop = dev->properties();
+    string tag = "Calibration";
+    HwSpectrum temp;
+    logD() << "time: " << hwSpc->getAcqTime() << ", HwSPC: " << hwSpc->toString();
+    NcLibrary::AdaptFilter(hwSpc.get(), &temp, prop->mFHM, nullptr);
+    auto peaks = NcLibrary::FindPeak(&temp, prop->mPeakInfo);
+    if (peaks[0] == 0 || peaks[1] == 0) {
+        NC_THROW_ALG_ERROR("FindPeak failed.");
+    }
 
+    if (prop->info.serialNumber == "940060" && peaks[0] > 4) {
+        peaks[0] -= 4;
+    }
+
+    //peaks[0] = peaks[0] - 3;
+    // Finding K40
+    /*......Hung-2024/05/21.................................................................................
+     * There are 2 cases to calibration:
+     * 1) Cs-137: then from 662keV to estimate K40 peak
+     * 2) Cs-137+Co60: Find peak from 1.332 Mev then estimate K40
+     */
+
+    //if (Calibration::compareModes(mode, Calibration::CO_60))
+    int K40_Ch = 0;
+    Coeffcients CurPeak = {peaks[0], peaks[1], 0};
+    if(mode == Calibration::SPRD_CO_60) {
+        K40_Ch = NcLibrary::FindK40CalibCo60(&temp,  CurPeak, prop.get());
+    } else if(mode == Calibration::SPRD_CS_137) {
+        auto calib = prop->getCalibration();
+        Coeffcients hwPeak = calib->chCoefficients();
+        for (auto i = 0; i < hwPeak.size(); i++) {
+            hwPeak[i] *= calib->getRatio();
+        }
+
+        K40_Ch = NcLibrary::K40EstRefEnergy( hwPeak, CurPeak);
+    }
+    else //HH300 Device
+    {
+//        K40_Ch=FindK40Peak(&temp,  CurPeak,  dev );
+    }
+
+    if (K40_Ch == 0) {
+        NC_THROW_ALG_ERROR("Can't find K40 peak");
+    }
+
+    logD() << "Peak calibs: " << peaks[0] << ',' << peaks[1] << ',' << K40_Ch;
+
+
+
+    Coeffcients foundPeaks = {peaks[0], peaks[1], (double) K40_Ch};
+    shared_ptr<Calibration> ret = prop->getCalibration();
+    auto dbManager = ComponentManager::instance().databaseManager();
+
+    if (updateStdPeaks) {
+        DetectorCalibConfig calibConf = {
+            .spc = hwSpc,
+            .time = QDateTime::currentDateTime(),
+            .calib = foundPeaks,
+            .detectorId = prop->getId()
+        };
+        ret->setStdPeaks(calibConf.calib);
+
+        dbManager->insertDetectorCalibConfig(&calibConf);
+    }
+
+    updateCalibFromRawPeak(ret.get(), foundPeaks);
+
+    ret->setSpc(hwSpc);
+    ret->setTemperature(prop->getRawTemperature());
+    ret->setGC(prop->getGC());
+    ret->setDetectorId(prop->getId());
+
+    dbManager->insertCalibration(ret.get());
+    prop->setCalibration(ret);
+
+//    dev->sendUpdateCalib(foundPeaks[0], foundPeaks[1], foundPeaks[2]);
+}
+
+DetectorComponent *NcManager::getCurrentDetector()
+{
+    return ComponentManager::instance().detectorComponent();
 }
 
 void NcManager::onRecvGC(nucare::DetectorComponent* dev, std::shared_ptr<GcResponse> message) {

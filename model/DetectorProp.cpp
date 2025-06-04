@@ -21,6 +21,21 @@ DetectorProperty::DetectorProperty() : mCalib(), mOriginSpc(nullptr)
     mPeakInfo = { 150, 450 };
     setDetectorCode(CSI_SPRD);
 //    setDetectorCode(LaBr_1_5x1_5);
+
+    // TODO Hardcode for sprd csi
+    setFWHM({0.737424355,-4.269930955});
+    setPeakCoefficient({-0.027939138, 0.694026779,-6.627760069,28.20796375,-48.74100729});
+    setStdEffecients({0.000426431, 0.000598509, 0.00066558,0.000749811,0.0009499,0.000402778,0.000531464,0.000291814,0.000239788,0.000218446});
+    setGeCoefficient({-0.027991301, 0.088086519, -0.107955794, 0.066087146, -0.020434902, 0.002566901});
+    setROI(0.6);
+    setGCFactor(9.0);
+    setTemperatureFactor({-0.134095617, 6.239816076});
+    setSmooths(0.014096065, 1.65610479);
+    setFHM({1.2964663, -3.633816});
+    setGaugeFit(0.7);
+    setGainThreshold(75);
+    setPeakInfo(300, 550);
+    // End
 }
 
 double DetectorProperty::getK40Ch()

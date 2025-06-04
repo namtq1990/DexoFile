@@ -24,13 +24,22 @@ public:
 
 //    virtual void bindData(app::uc::meter::model::Data& data);
     void reloadLocal() override;
-
-    void showConfirmDlg();
-    void showGammaWarning();
+    navigation::NavigationEntry* showInfo(const char* msg) override;
+    navigation::NavigationEntry* showError(const char* msg) override;
 
 public slots:
     void onRecvSpectrum();
-    void onRecvBacground();
+    void onRecvResult();
+    void onAdjustCount(int count);
+
+private:
+    Calibration::Mode m_mode;
+    bool m_updateStdPeak;
+
+    friend navigation::NavigationEntry* navigation::toCalibration(BaseView*, Calibration::Mode,
+                                     bool updateStdPeak);
+    friend void navigation::toCalibration(navigation::NavigationComponent* navController, navigation::NavigationEntry* entry,
+                                          Calibration::Mode mode, bool updateStdPeak, const QString& tag);
 };
 
 #endif // CALIBRATIONSCREEN_H
