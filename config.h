@@ -43,7 +43,9 @@ constexpr const char* BACKGROUND_TAG = "BackgroundScreen";
 constexpr const char* SPECTRUMVIEW_TAG = "SpectrumScreen";
 constexpr const char* CALIBRATION_TAG = "CalibrationScreen";
 constexpr const char* CHOICE_TAG  = "ChoiceDlg";
-constexpr const char* ACACQ_TIME_TAGTIME = "AcqTimeDlg";
+constexpr const char* ACQ_TIME_TAG = "AcqTimeDlg";
+constexpr const char* EVENTS_TAG = "EventList";
+constexpr const char* EVENT_DETAIL_TAG = "EventDetailScreen";
 }  // namespace tag
 
 namespace ui {

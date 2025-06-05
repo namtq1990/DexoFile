@@ -26,7 +26,7 @@ HomePage::HomePage(QWidget* parent) : BaseScreen(tag::HOME_TAG, parent), ui(new 
     setLeftAction(new ViewAction(
         "Events",
         [this]() {
-            nucare::logD() << "Event action triggered";
+            navigation::toEventList(this);
             return true;
         },
         nullptr));
@@ -160,8 +160,8 @@ void HomePage::stateChanged(AccumulatorState state)
 
         // Populate Event object
         event.setSoftwareVersion(QApplication::applicationVersion()); // Or a more appropriate version
-        event.setDateBegin(datetime::formatIsoDate(ret.startTime));
-        event.setDateFinish(datetime::formatIsoDate(ret.finishTime));
+        event.setStartedTime(ret.startTime);
+        event.setFinishedTime(ret.finishTime);
         event.setLiveTime(ret.finishTime.secsTo(ret.startTime));
         event.setAvgCps(ret.avgCPS);
         event.setMaxCps(ret.maxCPS);

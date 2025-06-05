@@ -46,7 +46,7 @@ public:
     std::shared_ptr<Calibration> getLatestCalibration(int detectorId);
 
     // Event operations
-    std::vector<std::shared_ptr<Event>> getEvents(int page, int pageSize);
+    QVector<std::shared_ptr<Event>> getEvents(int index, int pageSize);
     std::shared_ptr<Event> getEventDetails(int id);
     void loadEventDetailsInto(Event* event);
     std::shared_ptr<DetectorCalibConfig> getDefaultDetectorConfig(const int detId);
@@ -63,6 +63,7 @@ public:
     QVariant getSetting(const QString& name, const QVariant& defaultValue = QVariant());
     void setSetting(const QString& name, const QVariant& value);
     QMap<QString, QVariant> getAllSettings();
+    int getTotalEventCount();
 
 private:
     QSqlDatabase m_database;

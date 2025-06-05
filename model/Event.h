@@ -14,8 +14,6 @@ class Event
 private:
 
     QString mSoftwareVersion;
-    QString mDateBegin;
-    QString mDateFinish;
     double mLiveTime;
     double mRealTime;
     double mAvgDose;
@@ -36,6 +34,14 @@ private:
     double mE2Energy;
     double mE2Branching;
     double mE2Netcount;
+
+    QString mPipeMaterial;
+    double mPipeThickness;
+    double mPipeDiameter;
+    QString mClogMaterial;
+    double mClogDensity;
+    double mClogThickness;
+    double mClogRatio;
 
     nucare::Timestamp mTimeStarted;
     nucare::Timestamp mTimeFinished;
@@ -64,8 +70,8 @@ public:
     inline void setAcqTime(int acqTime) { mAcqTime = acqTime; }
     inline void setStartedTime(const nucare::Timestamp& time) { mTimeStarted = time; }
     inline void setFinishedTime(const nucare::Timestamp& time) { mTimeFinished = time; }
-    inline auto getStartedTime() { return mTimeStarted; }
-    inline auto getFinishedTime() { return mTimeFinished; }
+    inline auto getStartedTime() const { return mTimeStarted; }
+    inline auto getFinishedTime() const { return mTimeFinished; }
     inline std::shared_ptr<Spectrum> getSpectrum() { return mSpc; }
     void setSpectrum(std::shared_ptr<Spectrum> spc);
     void setSpectrum(const Spectrum::SPC_DATA data);
@@ -76,8 +82,6 @@ public:
 
     // Setters
     inline void setSoftwareVersion(const QString& version) { mSoftwareVersion = version; }
-    inline void setDateBegin(const QString& date) { mDateBegin = date; }
-    inline void setDateFinish(const QString& date) { mDateFinish = date; }
     inline void setLiveTime(double time) { mLiveTime = time; }
     inline void setAvgGamma_nSv(double value) { mAvgGamma_nSv = value; }
     inline void setMaxGamma_nSv(double value) { mMaxGamma_nSv = value; }
@@ -95,6 +99,14 @@ public:
     inline void setE2Branching(double value) { mE2Branching = value; }
     inline void setE2Netcount(double value) { mE2Netcount = value; }
 
+    inline void setPipeMaterial(const QString& value) { mPipeMaterial = value; }
+    inline void setPipeThickness(double value) { mPipeThickness = value; }
+    inline void setPipeDiameter(double value) { mPipeDiameter = value; }
+    inline void setClogMaterial(const QString& value) { mClogMaterial = value; }
+    inline void setClogDensity(double value) { mClogDensity = value; }
+    inline void setClogThickness(double value) { mClogThickness = value; }
+    inline void setClogRatio(double value) { mClogRatio = value; }
+
     Event& operator=(const Event& ev);
 
     inline double getAvgDose() const { return mAvgDose; }
@@ -108,8 +120,6 @@ public:
 
     // Getters for members used in insertEvent (already const)
     inline QString getSoftwareVersion() const { return mSoftwareVersion; }
-    inline QString getDateBegin() const { return mDateBegin; }
-    inline QString getDateFinish() const { return mDateFinish; }
     inline double getLiveTime() const { return mLiveTime; }
     inline double getAvgGamma_nSv() const { return mAvgGamma_nSv; }
     inline double getMaxGamma_nSv() const { return mMaxGamma_nSv; }
@@ -125,6 +135,13 @@ public:
     inline double getE2Energy() const { return mE2Energy; }
     inline double getE2Branching() const { return mE2Branching; }
     inline double getE2Netcount() const { return mE2Netcount; }
+    inline QString getPipeMaterial() const { return mPipeMaterial; }
+    inline double getPipeThickness() const { return mPipeThickness; }
+    inline double getPipeDiameter() const { return mPipeDiameter; }
+    inline QString getClogMaterial() const { return mClogMaterial; }
+    inline double getClogDensity() const { return mClogDensity; }
+    inline double getClogThickness() const { return mClogThickness; }
+    inline double getClogRatio() const { return mClogRatio; }
     inline long getDetectorId() const { return mDetectorId; }
 };
 

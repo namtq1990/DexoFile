@@ -32,9 +32,9 @@ bool DatabaseManager::executeQuery(QSqlQuery& query, const QString& context) {
     for (const auto& key : query.boundValues().keys()) {
         sql.replace(key, query.boundValue(key).toString());
     }
-    
+
     logD() << "Executing SQL [" << context << "]: " << sql;
-    
+
     bool success = query.exec();
     if (!success) {
         logE() << "SQL execution failed [" << context << "]: " << query.lastError().text();
@@ -42,7 +42,7 @@ bool DatabaseManager::executeQuery(QSqlQuery& query, const QString& context) {
     } else {
         logD() << "SQL executed successfully [" << context << "]";
     }
-    
+
     return success;
 }
 
@@ -192,7 +192,14 @@ bool DatabaseManager::createTablesIfNotExist()
                   "e1Netcount NUMERIC NOT NULL DEFAULT 0, "
                   "e2Energy NUMERIC NOT NULL DEFAULT 0, "
                   "e2Branching NUMERIC NOT NULL DEFAULT 0, "
-                  "e2Netcount NUMERIC NOT NULL DEFAULT 0)");
+                  "e2Netcount NUMERIC NOT NULL DEFAULT 0, "
+                  "PipeMaterial TEXT, "
+                  "PipeThickness NUMERIC NOT NULL DEFAULT 0, "
+                  "PipeDiameter NUMERIC NOT NULL DEFAULT 0, "
+                  "ClogMaterial TEXT, "
+                  "ClogDensity NUMERIC NOT NULL DEFAULT 0, "
+                  "ClogThickness NUMERIC NOT NULL DEFAULT 0, "
+                  "ClogRatio NUMERIC NOT NULL DEFAULT 0)");
     success &= executeQuery(query, "Creating event table");
     // Redundant log removed: if (!success) logE() << query.lastError().text();
 
@@ -384,11 +391,11 @@ std::shared_ptr<Background> DatabaseManager::getBackgroundById(int id)
 
         QString spectrumDataStr = query.value("spectrum").toString();
         auto spectrum = std::shared_ptr<Spectrum>(Spectrum::pFromString(spectrumDataStr));
-        
+
         spectrum->setAcqTime(query.value("acqTime").toInt()); // acqTime is INTEGER in schema
         spectrum->setRealTime(query.value("realTime").toDouble());
         spectrum->setDetectorID(query.value("detectorId").toInt());
-        
+
         background->spc = spectrum;
         background->date = query.value("date").toString();
         return background;
@@ -412,7 +419,7 @@ std::shared_ptr<Calibration> DatabaseManager::getCalibrationById(int id)
         auto calibration = std::make_shared<Calibration>();
         calibration->setId(query.value("id").toInt());
         calibration->setDetectorId(query.value("detector_id").toInt());
-        
+
         Coeffcients coefficients;
         coefficients[0] = query.value("coef_a").toDouble(); // Cast to double for model
         coefficients[1] = query.value("coef_b").toDouble();
@@ -433,22 +440,22 @@ std::shared_ptr<Calibration> DatabaseManager::getCalibrationById(int id)
 
         calibration->setDate(nucare::Timestamp::fromString(query.value("time").toString(), Qt::ISODate)); // 'time' in schema maps to 'date' in model
         calibration->setTemperature(query.value("temperature").toDouble());
-        
+
         return calibration;
     }
 
     return nullptr;
 }
 
-std::vector<std::shared_ptr<Event>> DatabaseManager::getEvents(int page, int pageSize)
+QVector<std::shared_ptr<Event>> DatabaseManager::getEvents(int page, int pageSize)
 {
-    std::vector<std::shared_ptr<Event>> events;
+    QVector<std::shared_ptr<Event>> events;
     QSqlQuery query(m_database);
-    query.prepare("SELECT event_id, softwareVersion, dateBegin, dateFinish, liveTime, realTime, avgGamma_nSv, maxGamma_nSv, minGamma_nSv, avgFillCps, detectorId, detail_id, background_id, calibration_id, avgCps, maxCps, minCps, e1Energy, e1Branching, e1Netcount, e2Energy, e2Branching, e2Netcount FROM event ORDER BY event_id DESC LIMIT :limit OFFSET :offset");
+    query.prepare("SELECT event_id, softwareVersion, dateBegin, dateFinish, liveTime, realTime, avgGamma_nSv, maxGamma_nSv, minGamma_nSv, avgFillCps, detectorId, detail_id, background_id, calibration_id, avgCps, maxCps, minCps, e1Energy, e1Branching, e1Netcount, e2Energy, e2Branching, e2Netcount, PipeMaterial, PipeThickness, PipeDiameter, ClogMaterial, ClogDensity, ClogThickness, ClogRatio FROM event ORDER BY event_id DESC LIMIT :limit OFFSET :offset");
     query.bindValue(":limit", pageSize);
-    query.bindValue(":offset", (page - 1) * pageSize);
+    query.bindValue(":offset", page * pageSize);
 
-    if (!executeQuery(query, "Fetching events with pagination")) {
+    if (!executeQuery(query, QString::asprintf("Fetching events with pagination at %d", page))) {
         // Redundant log removed: logE() << query.lastError().text();
         return events;
     }
@@ -457,8 +464,8 @@ std::vector<std::shared_ptr<Event>> DatabaseManager::getEvents(int page, int pag
         auto event = std::make_shared<Event>();
         event->setId(query.value("event_id").toLongLong());
         event->setSoftwareVersion(query.value("softwareVersion").toString());
-        event->setDateBegin(query.value("dateBegin").toString());
-        event->setDateFinish(query.value("dateFinish").toString());
+        event->setStartedTime(query.value("dateBegin").toDateTime());
+        event->setFinishedTime(query.value("dateFinish").toDateTime());
         event->setLiveTime(query.value("liveTime").toDouble());
         event->setRealTime(query.value("realTime").toDouble());
         event->setAvgGamma_nSv(query.value("avgGamma_nSv").toDouble());
@@ -478,6 +485,13 @@ std::vector<std::shared_ptr<Event>> DatabaseManager::getEvents(int page, int pag
         event->setE2Energy(query.value("e2Energy").toDouble());
         event->setE2Branching(query.value("e2Branching").toDouble());
         event->setE2Netcount(query.value("e2Netcount").toDouble());
+        event->setPipeMaterial(query.value("PipeMaterial").toString());
+        event->setPipeThickness(query.value("PipeThickness").toDouble());
+        event->setPipeDiameter(query.value("PipeDiameter").toDouble());
+        event->setClogMaterial(query.value("ClogMaterial").toString());
+        event->setClogDensity(query.value("ClogDensity").toDouble());
+        event->setClogThickness(query.value("ClogThickness").toDouble());
+        event->setClogRatio(query.value("ClogRatio").toDouble());
         events.push_back(event);
     }
 
@@ -487,7 +501,7 @@ std::vector<std::shared_ptr<Event>> DatabaseManager::getEvents(int page, int pag
 std::shared_ptr<Event> DatabaseManager::getEventDetails(int id)
 {
     QSqlQuery query(m_database);
-    query.prepare("SELECT event_id, softwareVersion, dateBegin, dateFinish, liveTime, realTime, avgGamma_nSv, maxGamma_nSv, minGamma_nSv, avgFillCps, detectorId, detail_id, background_id, calibration_id, avgCps, maxCps, minCps, e1Energy, e1Branching, e1Netcount, e2Energy, e2Branching, e2Netcount FROM event WHERE event_id = :id");
+    query.prepare("SELECT event_id, softwareVersion, dateBegin, dateFinish, liveTime, realTime, avgGamma_nSv, maxGamma_nSv, minGamma_nSv, avgFillCps, detectorId, detail_id, background_id, calibration_id, avgCps, maxCps, minCps, e1Energy, e1Branching, e1Netcount, e2Energy, e2Branching, e2Netcount, PipeMaterial, PipeThickness, PipeDiameter, ClogMaterial, ClogDensity, ClogThickness, ClogRatio FROM event WHERE event_id = :id");
     query.bindValue(":id", id);
 
     if (!executeQuery(query, "Fetching event details by ID")) {
@@ -499,8 +513,8 @@ std::shared_ptr<Event> DatabaseManager::getEventDetails(int id)
         auto event = std::make_shared<Event>();
         event->setId(query.value("event_id").toLongLong());
         event->setSoftwareVersion(query.value("softwareVersion").toString());
-        event->setDateBegin(query.value("dateBegin").toString());
-        event->setDateFinish(query.value("dateFinish").toString());
+        event->setStartedTime(query.value("dateBegin").toDateTime());
+        event->setFinishedTime(query.value("dateFinish").toDateTime());
         event->setLiveTime(query.value("liveTime").toDouble());
         event->setRealTime(query.value("realTime").toDouble());
         event->setAvgGamma_nSv(query.value("avgGamma_nSv").toDouble());
@@ -520,6 +534,13 @@ std::shared_ptr<Event> DatabaseManager::getEventDetails(int id)
         event->setE2Energy(query.value("e2Energy").toDouble());
         event->setE2Branching(query.value("e2Branching").toDouble());
         event->setE2Netcount(query.value("e2Netcount").toDouble());
+        event->setPipeMaterial(query.value("PipeMaterial").toString());
+        event->setPipeThickness(query.value("PipeThickness").toDouble());
+        event->setPipeDiameter(query.value("PipeDiameter").toDouble());
+        event->setClogMaterial(query.value("ClogMaterial").toString());
+        event->setClogDensity(query.value("ClogDensity").toDouble());
+        event->setClogThickness(query.value("ClogThickness").toDouble());
+        event->setClogRatio(query.value("ClogRatio").toDouble());
         return event;
     }
 
@@ -584,7 +605,7 @@ int DatabaseManager::insertBackground(const Background* background)
     QSqlQuery query(m_database);
     query.prepare("INSERT INTO background (spectrum, acqTime, realTime, detectorId, date) "
                  "VALUES (:spectrum, :acqTime, :realTime, :detectorId, :date)");
-    
+
     QByteArray spectrumData;
     if (background->spc) {
         spectrumData = background->spc->toString().toUtf8(); // Use Spectrum::toString()
@@ -608,7 +629,7 @@ int DatabaseManager::insertCalibration(const Calibration* calibration)
     QSqlQuery query(m_database);
     query.prepare("INSERT INTO calibration (detector_id, coef_a, coef_b, coef_c, gc, ratio, chpeak_a, chpeak_b, chpeak_c, time, temperature) "
                  "VALUES (:detector_id, :coef_a, :coef_b, :coef_c, :gc, :ratio, :chpeak_a, :chpeak_b, :chpeak_c, :time, :temperature)");
-    
+
     query.bindValue(":detector_id", calibration->getDetectorId());
     query.bindValue(":coef_a", static_cast<int>(calibration->coefficients()[0])); // Cast to INTEGER
     query.bindValue(":coef_b", static_cast<int>(calibration->coefficients()[1]));
@@ -634,12 +655,12 @@ int DatabaseManager::insertCalibration(const Calibration* calibration)
 qlonglong DatabaseManager::insertEvent(const Event* event)
 {
     QSqlQuery query(m_database);
-    query.prepare("INSERT INTO event (softwareVersion, dateBegin, dateFinish, liveTime, realTime, avgGamma_nSv, maxGamma_nSv, minGamma_nSv, avgFillCps, detectorId, detail_id, background_id, calibration_id, avgCps, maxCps, minCps, e1Energy, e1Branching, e1Netcount, e2Energy, e2Branching, e2Netcount) "
-                 "VALUES (:softwareVersion, :dateBegin, :dateFinish, :liveTime, :realTime, :avgGamma_nSv, :maxGamma_nSv, :minGamma_nSv, :avgFillCps, :detectorId, :detail_id, :background_id, :calibration_id, :avgCps, :maxCps, :minCps, :e1Energy, :e1Branching, :e1Netcount, :e2Energy, :e2Branching, :e2Netcount)");
-    
+    query.prepare("INSERT INTO event (softwareVersion, dateBegin, dateFinish, liveTime, realTime, avgGamma_nSv, maxGamma_nSv, minGamma_nSv, avgFillCps, detectorId, detail_id, background_id, calibration_id, avgCps, maxCps, minCps, e1Energy, e1Branching, e1Netcount, e2Energy, e2Branching, e2Netcount, PipeMaterial, PipeThickness, PipeDiameter, ClogMaterial, ClogDensity, ClogThickness, ClogRatio) "
+                 "VALUES (:softwareVersion, :dateBegin, :dateFinish, :liveTime, :realTime, :avgGamma_nSv, :maxGamma_nSv, :minGamma_nSv, :avgFillCps, :detectorId, :detail_id, :background_id, :calibration_id, :avgCps, :maxCps, :minCps, :e1Energy, :e1Branching, :e1Netcount, :e2Energy, :e2Branching, :e2Netcount, :PipeMaterial, :PipeThickness, :PipeDiameter, :ClogMaterial, :ClogDensity, :ClogThickness, :ClogRatio)");
+
     query.bindValue(":softwareVersion", event->getSoftwareVersion());
-    query.bindValue(":dateBegin", event->getDateBegin());
-    query.bindValue(":dateFinish", event->getDateFinish());
+    query.bindValue(":dateBegin", event->getStartedTime());
+    query.bindValue(":dateFinish", event->getFinishedTime());
     query.bindValue(":liveTime", event->getLiveTime());
     query.bindValue(":realTime", event->getRealTime());
     query.bindValue(":avgGamma_nSv", event->getAvgGamma_nSv());
@@ -659,6 +680,13 @@ qlonglong DatabaseManager::insertEvent(const Event* event)
     query.bindValue(":e2Energy", event->getE2Energy());
     query.bindValue(":e2Branching", event->getE2Branching());
     query.bindValue(":e2Netcount", event->getE2Netcount());
+    query.bindValue(":PipeMaterial", event->getPipeMaterial());
+    query.bindValue(":PipeThickness", event->getPipeThickness());
+    query.bindValue(":PipeDiameter", event->getPipeDiameter());
+    query.bindValue(":ClogMaterial", event->getClogMaterial());
+    query.bindValue(":ClogDensity", event->getClogDensity());
+    query.bindValue(":ClogThickness", event->getClogThickness());
+    query.bindValue(":ClogRatio", event->getClogRatio());
 
     if (!executeQuery(query, "Inserting new event")) {
         // Redundant log removed: logE() << query.lastError().text();
@@ -687,13 +715,13 @@ int DatabaseManager::insertDetectorCalibConfig(const DetectorCalibConfig* config
     // Use INSERT OR REPLACE to update if detectorId exists, otherwise insert
     query.prepare("INSERT OR REPLACE INTO detector_config (detectorId, chPeakA, chPeakB, chPeakC, Time, Spectrum) "
                  "VALUES (:detectorId, :chPeakA, :chPeakB, :chPeakC, :Time, :Spectrum)");
-    
+
     query.bindValue(":detectorId", config->detectorId);
     query.bindValue(":chPeakA", config->calib[0]);
     query.bindValue(":chPeakB", config->calib[1]);
     query.bindValue(":chPeakC", config->calib[2]);
     query.bindValue(":Time", config->time.toString(Qt::ISODate));
-    
+
     QByteArray spectrumData;
     if (config->spc) {
         spectrumData = config->spc->toString().toUtf8();
@@ -736,11 +764,11 @@ std::shared_ptr<Background> DatabaseManager::getLatestBackground(int detectorId)
 
         QString spectrumDataStr = query.value("spectrum").toString();
         auto spectrum = std::shared_ptr<Spectrum>(Spectrum::pFromString(spectrumDataStr));
-        
+
         spectrum->setAcqTime(query.value("acqTime").toInt());
         spectrum->setRealTime(query.value("realTime").toDouble());
         spectrum->setDetectorID(query.value("detectorId").toInt());
-        
+
         background->spc = spectrum;
         background->date = query.value("date").toString();
         return background;
@@ -761,7 +789,7 @@ std::shared_ptr<Calibration> DatabaseManager::getLatestCalibration(int detectorI
         auto calibration = std::make_shared<Calibration>();
         calibration->setId(query.value("id").toInt());
         calibration->setDetectorId(query.value("detector_id").toInt());
-        
+
         Coeffcients coefficients;
         coefficients[0] = query.value("coef_a").toDouble();
         coefficients[1] = query.value("coef_b").toDouble();
@@ -779,7 +807,7 @@ std::shared_ptr<Calibration> DatabaseManager::getLatestCalibration(int detectorI
 
         calibration->setDate(nucare::Timestamp::fromString(query.value("time").toString(), Qt::ISODate));
         calibration->setTemperature(query.value("temperature").toDouble());
-        
+
         return calibration;
     }
 
@@ -790,7 +818,7 @@ QVariant DatabaseManager::getSetting(const QString& name, const QVariant& defaul
     QSqlQuery query(m_database);
     query.prepare("SELECT Value FROM setup WHERE Name = ?");
     query.addBindValue(name);
-    
+
     if (executeQuery(query, "Getting setting by name") && query.next()) {
         return query.value(0);
     }
@@ -802,7 +830,7 @@ void DatabaseManager::setSetting(const QString& name, const QVariant& value) {
     query.prepare("INSERT OR REPLACE INTO setup (Name, Value) VALUES (?, ?)");
     query.addBindValue(name);
     query.addBindValue(value.toString());
-    
+
     if (!executeQuery(query, "Saving setting: " + name)) {
         // executeQuery logs the error, context ("Saving setting: [name]"), and the SQL.
     }
@@ -812,14 +840,35 @@ QMap<QString, QVariant> DatabaseManager::getAllSettings() {
     QMap<QString, QVariant> settings;
     QSqlQuery query(m_database); // Ensure query is associated with the database
     query.prepare("SELECT Name, Value FROM setup");
-    
+
     if (executeQuery(query, "Getting all settings")) {
         while (query.next()) {
             settings.insert(query.value(0).toString(), query.value(1));
         }
     }
-    
+
     return settings;
+}
+
+int DatabaseManager::getTotalEventCount()
+{
+    if (!m_database.isOpen()) {
+        logE() << "Database not open when trying to get total event count.";
+        return 0;
+    }
+
+    QSqlQuery query(m_database);
+    query.prepare("SELECT COUNT(*) FROM event");
+
+    if (!executeQuery(query, "Getting total event count")) {
+        return 0;
+    }
+
+    if (query.next()) {
+        return query.value(0).toInt();
+    }
+
+    return 0;
 }
 
 } // namespace nucare

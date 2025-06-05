@@ -20,6 +20,7 @@ include_directories(page/setting) # Add setting directory for header searches
 include_directories(page/bgr) # Add bgr directory for header searches
 include_directories(page/calibration) # Add calibration directory for header searches
 include_directories(page/spectrum_viewer) # Add spectrum_viewer directory for header searches
+include_directories(page/event_detail) # Add event_detail directory for header searches
 include_directories(${Qt${QT_VERSION_MAJOR}_INCLUDE_DIRS} ${QT_QTCORE_INCLUDE_DIRS})
 
 find_package(QT NAMES Qt6 Qt5 COMPONENTS Widgets Core SerialPort Sql REQUIRED)
@@ -129,9 +130,15 @@ set(PROJECT_SOURCES
         page/calibration/CalibrationScreen.cpp
         page/CalibAcqDialog.h
         page/CalibAcqDialog.cpp
-        page/CountRateScreen.h
-        page/CountRateScreen.cpp
-        page/CountRateScreen.ui
+        page/events/EventListScreen.h
+        page/events/EventListScreen.cpp
+        page/events/EventListScreen.ui
+        page/events/EventListAdapter.h
+        page/events/EventListAdapter.cpp
+        page/event_detail/EventDetailScreen.h
+        page/event_detail/EventDetailScreen.cpp
+        page/event_detail/EventDetailScreen.ui
+        page/event_detail/EventDetailArgs.h
         controller/wifi_service.h
         controller/wifi_service.cpp
         controller/platform_controller.h

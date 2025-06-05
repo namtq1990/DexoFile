@@ -20,6 +20,7 @@ class BaseView;
 class SubSettingItem;
 class ChoicesDialogArgs;
 class SpectrumAccumulator;
+class EventDetailArgs;
 
 namespace navigation {
 
@@ -195,6 +196,8 @@ NavigationEntry* toCalibration(BaseView* parent,
                                bool updateStdPeak = false);
 NavigationEntry* toCalibCountDlg(BaseView* parent, const QString& = tag::CHOICE_TAG);
 NavigationEntry* toSpectrumViewer(BaseView* parent, std::shared_ptr<SpectrumAccumulator> accumulator);
+NavigationEntry* toEventList(BaseView* parent, const QString& = tag::EVENTS_TAG);
+NavigationEntry* toEventDetail(BaseView* parent, EventDetailArgs* args, const QString& = tag::EVENT_DETAIL_TAG);
 
 void showWarning(NavigationComponent* navController,
                  NavigationEntry* entry,

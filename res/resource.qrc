@@ -7,5 +7,10 @@
         <file alias="menu_ok">icons/menu_ok.png</file>
         <file alias="menu_up">icons/menu_up.png</file>
         <file alias="menu_acq_time">icons/menu_acq_time.png</file>
+        <file>icons/am_fixed.png</file>
+        <file>icons/circular_prog_bgr.png</file>
+        <file alias="menu_home">icons/menu_home.png</file>
+        <file>icons/menu_info.png</file>
+        <file alias="menu_up_ok">icons/menu_up_ok.png</file>
     </qresource>
 </RCC>
