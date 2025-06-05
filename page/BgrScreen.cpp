@@ -12,6 +12,7 @@
 #include "component/detectorcomponent.h"
 #include "component/navigationcomponent.h"
 #include "component/SpectrumAccumulator.h"
+#include "component/settingmanager.h"
 #include "model/DetectorProp.h"
 #include "ui_BgrScreen.h"
 
@@ -72,10 +73,11 @@ void BackgroundScreen::onCreate(navigation::NavigationArgs *args)
 {
     BaseScreen::onCreate(args);
     if (!m_counter) {
+        auto setting = ComponentManager::instance().settingManager();
         auto builder = SpectrumAccumulator::Builder()
                 .setParent(this)
-                .setTimeoutSeconds(120)
-                .setMode(SpectrumAccumulator::AccumulationMode::ByTime);
+                .setTimeoutSeconds(setting->getAcqTimeBgr())
+                .setMode(AccumulationMode::ByTime);
         m_counter = builder.build();
         connect(m_counter, &SpectrumAccumulator::accumulationUpdated, this, &BackgroundScreen::onRecvSpectrum);
         connect(m_counter, &SpectrumAccumulator::stateChanged, this, &BackgroundScreen::onRecvBacground);
@@ -119,7 +121,7 @@ void BackgroundScreen::onRecvSpectrum()
 {
     if (!m_counter) return;
     if (m_counter->getCurrentState() == AccumulatorState::Measuring) {
-        auto& ret = m_counter->getCurrentAccumulationResult();
+        auto& ret = m_counter->getCurrentResult();
         ui->acqCounter->setText(QString("%1 / %2")
                                 .arg(ret.count, 2, 10, QChar('0'))
                                 .arg(m_counter->getAcqTime()));
@@ -135,5 +137,5 @@ void BackgroundScreen::onRecvBacground()
         return;
     }
 
-    nucare::logD() << "Background Saved." << m_counter->getCurrentAccumulationResult().cps;
+    nucare::logD() << "Background Saved." << m_counter->getCurrentResult().cps;
 }

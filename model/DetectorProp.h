@@ -46,7 +46,7 @@ private:
     std::shared_ptr<Spectrum> mSpc;
     std::shared_ptr<HwSpectrum> mOriginSpc;
     double mCPS = 0;
-    double mCPS0 = 0;
+    double m_rawCps = 0;
     double mDoserate = 0;
     double mRealtime = 0;
     double mNeutron = 0;
@@ -127,7 +127,7 @@ public:
     void setGM(double gm);
     void setHasNeutron(bool hasNeutron) { mHasNeutron = hasNeutron; }
     void setCps(double cps) { mCPS = cps; }
-    void setCps0(double cps) { mCPS0 = cps; } //Origanl CPS
+    void setRawCps(double cps) { m_rawCps = cps; } //Origanl CPS
 
     void setDetectorCode(const DetectorCode_E code);
     void setSerial(const QString& serial) { info.serialNumber = serial; }
@@ -141,7 +141,7 @@ public:
     auto getSerial() { return info.serialNumber; }
 
     double getCps() const { return mCPS; }
-    double getCps0() const { return mCPS0; }
+    double getRawCps() const { return m_rawCps; }
     double getDoserate() const { return mDoserate; }
     double getGmCount() const;
 

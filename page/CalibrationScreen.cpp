@@ -92,7 +92,7 @@ void CalibrationScreen::onCreate(navigation::NavigationArgs *args)
         auto builder = SpectrumAccumulator::Builder()
                 .setParent(this)
                 .setTargetCount(settingMgr->getCalibCount())
-                .setMode(SpectrumAccumulator::AccumulationMode::ByCount); // Changed mode to ByCount
+                .setMode(AccumulationMode::ByCount); // Changed mode to ByCount
         m_counter = builder.build();
         connect(m_counter, &SpectrumAccumulator::accumulationUpdated, this, &CalibrationScreen::onRecvSpectrum);
         connect(m_counter, &SpectrumAccumulator::stateChanged, this, &CalibrationScreen::onRecvResult);
@@ -127,7 +127,7 @@ void CalibrationScreen::onRecvSpectrum()
 {
     if (!m_counter) return;
     if (m_counter->getCurrentState() == AccumulatorState::Measuring) {
-        auto& ret = m_counter->getCurrentAccumulationResult();
+        auto& ret = m_counter->getCurrentResult();
         ui->acqCounter->setText(QString("%1 / %2")
                                 .arg(ret.count, 2, 10, QChar('0'))
                                 .arg(m_counter->getAcqTime()));
@@ -145,7 +145,7 @@ void CalibrationScreen::onRecvResult()
 
     if (auto ncManager = ComponentManager::instance().ncManager()) {
         try {
-            auto& ret = m_counter->getCurrentAccumulationResult();
+            auto& ret = m_counter->getCurrentResult();
 
             ncManager->computeCalibration(ncManager->getCurrentDetector(), ret.spectrum, ret.hwSpectrum,
                                           m_mode, m_updateStdPeak);

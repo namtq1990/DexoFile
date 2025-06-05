@@ -114,7 +114,7 @@ void SpectrumViewerScreen::onRecvSpectrum()
     std::shared_ptr<Spectrum> spc;
 
     if (m_counter->getCurrentState() == AccumulatorState::Measuring) {
-        auto& ret = m_counter->getCurrentAccumulationResult();
+        auto& ret = m_counter->getCurrentResult();
         cps = ret.cps;
         spc = ret.spectrum;
         totalCount = ret.spectrum->getTotalCount();

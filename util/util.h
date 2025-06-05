@@ -222,6 +222,8 @@ QString formatDuration(int totalSeconds);
 
 QString formatDate_yyyyMMdd_HHmm(QDateTime& datetime);
 
+QString formatIsoDate(nucare::Time& datetime);
+
 }
 
 namespace ui {

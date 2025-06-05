@@ -11,6 +11,7 @@
 #include "model/Background.h"
 #include "model/Calibration.h"
 using namespace navigation;
+using namespace setting;
 
 void navigation::toHome(NavigationComponent* navController, NavigationEntry* entry, const QString& tag) {
     auto pWidget = dynamic_cast<QWidget*>(entry->host);
@@ -44,15 +45,22 @@ HomePage::HomePage(QWidget* parent) : BaseScreen(tag::HOME_TAG, parent), ui(new 
         return true;
     }));
 
-
+    auto settingMgr = ComponentManager::instance().settingManager();
     auto builder = SpectrumAccumulator::Builder()
             .setParent(this)
-            .setMode(SpectrumAccumulator::AccumulationMode::ContinuousByTime)
-            .setContinuousInterval(7200)
-            .setTimeoutSeconds(3600);
+            .setMode(AccumulationMode::ContinuousByTime)
+            .setContinuousInterval(settingMgr->getMeasureInterval())
+            .setTimeoutSeconds(settingMgr->getAcqTimeId());
     m_accumulator = std::shared_ptr<SpectrumAccumulator>(builder.build());
     connect(m_accumulator.get(), &SpectrumAccumulator::stateChanged, this, &HomePage::stateChanged);
     connect(m_accumulator.get(), &SpectrumAccumulator::accumulationUpdated, this, &HomePage::updateEvent);
+
+    settingMgr->subscribeKey(SettingManager::KEY_ACQTIME_ID, (QObject*)this, [this](setting::SettingManager* mgr, auto) {
+        setMeasureTime(mgr->getAcqTimeId());
+    });
+    settingMgr->subscribeKey(SettingManager::KEY_MEASURE_INVERVAL, (QObject*)this, [this](SettingManager* mgr, auto) {
+        setIntervalTime(mgr->getMeasureInterval());
+    });
 
     stateChanged(getState());
 }
@@ -77,6 +85,23 @@ AccumulatorState HomePage::getState()
 {
     if (m_accumulator) return m_accumulator->getCurrentState();
     return AccumulatorState::Idle;
+}
+
+void HomePage::setIntervalTime(int sec)
+{
+    if (m_accumulator) {
+        m_accumulator->setIntervalTime(sec);
+        ui->intervalTimeLabel->setText(QString("Int.time: %1")
+                                       .arg(datetime::formatDuration(m_accumulator->getIntervalTime())));
+    }
+}
+
+void HomePage::setMeasureTime(int sec)
+{
+    if (m_accumulator) {
+        m_accumulator->setTargetTime(sec);
+        ui->stopTimeValueLabel->setText(datetime::formatDate_yyyyMMdd_HHmm(m_accumulator->getCurrentResult().finishTime));
+    }
 }
 
 void HomePage::stateChanged(AccumulatorState state)
@@ -106,8 +131,6 @@ void HomePage::stateChanged(AccumulatorState state)
         ui->etValueLabel->hide();
 
         ui->measureTimeValueLabel->setText(QString("%1 min").arg(m_accumulator->getAcqTime()));
-        ui->intervalTimeLabel->setText(QString("Int.time: %1")
-                                       .arg(datetime::formatDuration(m_accumulator->getIntervalTime())));
 
         break;
     }
@@ -119,6 +142,8 @@ void HomePage::stateChanged(AccumulatorState state)
         ui->stopTimeValueLabel->show();
         ui->etTitleLabel->show();
         ui->etValueLabel->show();
+        ui->stopTimeValueLabel->setText(datetime::formatDate_yyyyMMdd_HHmm(m_accumulator->getCurrentResult().finishTime));
+        ui->startTimeValueLabel->setText(datetime::formatDate_yyyyMMdd_HHmm(m_accumulator->getCurrentResult().startTime));
         break;
     }
     case AccumulatorState::Waiting: {
@@ -128,18 +153,16 @@ void HomePage::stateChanged(AccumulatorState state)
     case AccumulatorState::Completed: {
         ui->stateLabel->setText("State: Waiting");
 
-        // Retrieve accumulation result
-        auto ret = m_accumulator->getCurrentAccumulationResult();
+        auto ret = m_accumulator->getCurrentResult();
 
-        // Create Event object
-        model::Event event;
+        auto dbManager = ComponentManager::instance().databaseManager();
+        Event event;
 
         // Populate Event object
-        event.setSoftwareVersion("1.0.0"); // Or a more appropriate version
-        event.setDateBegin(datetime::formatDate_yyyyMMdd_HHmmss(ret.startTime));
-        event.setDateFinish(datetime::formatDate_yyyyMMdd_HHmmss(ret.finishTime));
-        event.setLiveTime(ret.liveTime);
-        event.setRealTime(ret.realTime);
+        event.setSoftwareVersion(QApplication::applicationVersion()); // Or a more appropriate version
+        event.setDateBegin(datetime::formatIsoDate(ret.startTime));
+        event.setDateFinish(datetime::formatIsoDate(ret.finishTime));
+        event.setLiveTime(ret.finishTime.secsTo(ret.startTime));
         event.setAvgCps(ret.avgCPS);
         event.setMaxCps(ret.maxCPS);
         event.setMinCps(ret.minCPS);
@@ -164,13 +187,14 @@ void HomePage::stateChanged(AccumulatorState state)
         }
 
         // Placeholder for detailId, will be updated later
-        event.setDetail_id(0);
+        event.setDetailId(0);
 
-        // Spectrum data from ret.accumulatedSpectrum
-        // Assuming AccumulationResult has 'Spectrum accumulatedSpectrum;' and Spectrum has 'toString()'
-        QString spectrumStringData = ret.accumulatedSpectrum.toString();
-        if (spectrumStringData.isEmpty()) { // Adjust this check if toString() on empty spectrum is not empty string
-            nucare::logW() << "Accumulation result has empty spectrum data string.";
+        QString spectrumStringData;
+
+        if (ret.spectrum) {
+            spectrumStringData = ret.spectrum->toString();
+            event.setRealTime(ret.spectrum->getRealTime());
+            event.setAvgFillCps(ret.spectrum->getFillCps() / ret.spectrum->getAcqTime());
         }
 
         event.setE1Energy(0);     // Default value
@@ -180,8 +204,6 @@ void HomePage::stateChanged(AccumulatorState state)
         event.setE2Branching(0);  // Default value
         event.setE2Netcount(0);   // Default value
 
-        // Get DatabaseManager instance
-        auto dbManager = ComponentManager::instance()->getComponent<DatabaseManager>("DATABASE");
 
         // Insert event data
         if (dbManager) {
@@ -189,24 +211,7 @@ void HomePage::stateChanged(AccumulatorState state)
             nucare::logI() << "Event inserted with ID:" << eventId;
 
             if (eventId > 0 && !spectrumStringData.isEmpty()) {
-                qlonglong detailId = dbManager->insertEventDetail(eventId, spectrumStringData);
-                nucare::logI() << "Event detail inserted with ID:" << detailId;
-
-                if (detailId > 0) {
-                    bool updateSuccess = dbManager->updateEventDetailId(eventId, detailId);
-                    if (updateSuccess) {
-                        nucare::logI() << "Successfully updated event" << eventId << "with detail_id" << detailId;
-                    } else {
-                        nucare::logW() << "Failed to update event" << eventId << "with detail_id" << detailId;
-                    }
-                } else {
-                    nucare::logW() << "Failed to insert event_detail for event ID:" << eventId << "(detailId was" << detailId << ")";
-                }
-            } else {
-                nucare::logW() << "Skipping event_detail insertion due to invalid eventId or empty spectrum data for event ID:" << eventId;
-                if (spectrumStringData.isEmpty()) {
-                    nucare::logW() << "Spectrum string data was empty.";
-                }
+                dbManager->insertEventDetail(eventId, spectrumStringData);
             }
         } else {
             nucare::logW() << "DatabaseManager not found!";
@@ -220,9 +225,7 @@ void HomePage::stateChanged(AccumulatorState state)
 void HomePage::updateEvent()
 {
     if (m_accumulator) {
-        auto& ret = m_accumulator->getCurrentAccumulationResult();
-        ui->startTimeValueLabel->setText(datetime::formatDate_yyyyMMdd_HHmm(ret.startTime));
-        ui->stopTimeValueLabel->setText(datetime::formatDate_yyyyMMdd_HHmm(ret.finishTime));
+        auto& ret = m_accumulator->getCurrentResult();
 
         auto etTime = ret.finishTime.toSecsSinceEpoch() - QDateTime::currentSecsSinceEpoch();
         ui->etValueLabel->show();

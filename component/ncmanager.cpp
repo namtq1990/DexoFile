@@ -182,7 +182,7 @@ void NcManager::onRecvPackage(nucare::DetectorComponent* dev, std::shared_ptr<De
 
     auto cps0=spc->getTotalCount()/(pkg->realtime == 0 ? 1 : pkg->realtime);
 
-    prop->setCps0(cps0);
+    prop->setRawCps(cps0);
 
     //Smoothing CPS in 3 sec
     prop->setCps(mAvgCps.addedValue(cps0));

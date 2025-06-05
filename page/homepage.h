@@ -28,6 +28,9 @@ public:
 
     AccumulatorState getState();
 
+    void setIntervalTime(int sec);
+    void setMeasureTime(int sec);
+
 public slots:
     void stateChanged(AccumulatorState);
     void updateEvent();

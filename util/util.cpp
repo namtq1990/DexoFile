@@ -64,3 +64,8 @@ QString datetime::formatDuration(int totalSeconds) {
 
     return ret.join("");
 }
+
+QString datetime::formatIsoDate(nucare::Time &datetime)
+{
+    return datetime.toString(Qt::ISODateWithMs);
+}

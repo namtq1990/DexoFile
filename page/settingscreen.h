@@ -39,14 +39,13 @@ private:
                            const QString& tag);
 
 private slots:
+ void saveSetting(QString& key, QVariant& value);
  void openSubSetting(BaseSettingItem* item);
  void openChoice(BaseSettingItem* item);
  void openBackground(BaseSettingItem* item);
  void openCalibCo60(BaseSettingItem* item);
  void openCalibEstCs137(std::shared_ptr<BaseSettingItem> item);
  void openSwVersion(BaseSettingItem* item);
- void handleSoundSetting(BaseSettingItem* item);
- void handleWifiSetting(BaseSettingItem* item);
 };
 
 #endif // SETTINGSCREEN_H

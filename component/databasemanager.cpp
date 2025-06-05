@@ -681,20 +681,6 @@ qlonglong DatabaseManager::insertEventDetail(qlonglong eventId, const QString& s
     return query.lastInsertId().toLongLong();
 }
 
-bool DatabaseManager::updateEventDetailId(qlonglong eventId, qlonglong detailId)
-{
-    QSqlQuery query(m_database);
-    query.prepare("UPDATE event SET detail_id = :detail_id WHERE event_id = :event_id");
-    query.bindValue(":detail_id", detailId);
-    query.bindValue(":event_id", eventId);
-
-    if (!executeQuery(query, "Updating event detail_id")) {
-        // executeQuery already logs the error
-        return false;
-    }
-    return true;
-}
-
 int DatabaseManager::insertDetectorCalibConfig(const DetectorCalibConfig* config)
 {
     QSqlQuery query(m_database);
@@ -812,13 +798,12 @@ QVariant DatabaseManager::getSetting(const QString& name, const QVariant& defaul
 }
 
 void DatabaseManager::setSetting(const QString& name, const QVariant& value) {
-    QSqlQuery query;
+    QSqlQuery query(m_database);
     query.prepare("INSERT OR REPLACE INTO setup (Name, Value) VALUES (?, ?)");
     query.addBindValue(name);
     query.addBindValue(value.toString());
     
     if (!executeQuery(query, "Saving setting: " + name)) {
-        // Redundant log removed. Original: logE() << "Failed to save setting:" << name << query.lastError();
         // executeQuery logs the error, context ("Saving setting: [name]"), and the SQL.
     }
 }

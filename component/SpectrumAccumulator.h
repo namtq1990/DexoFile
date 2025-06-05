@@ -18,25 +18,18 @@ class SpectrumAccumulator : public QObject { // Removed Component
     Q_OBJECT
 
 public:
-    enum class AccumulationMode { // New enum class
-        NotSet,
-        ByCount,
-        ByTime,
-        ContinuousByCount,
-        ContinuousByTime
-    };
     friend class Builder;
 
     class Builder {
     public:
         Builder() :
-            m_mode(SpectrumAccumulator::AccumulationMode::NotSet),
+            m_mode(AccumulationMode::NotSet),
             m_targetCountValue(0),
             m_timeoutValueSeconds(0),
             m_continuousIntervalSeconds(0),
             m_parent(nullptr) {}
 
-        Builder& setMode(SpectrumAccumulator::AccumulationMode mode) {
+        Builder& setMode(AccumulationMode mode) {
             m_mode = mode;
             return *this;
         }
@@ -69,7 +62,7 @@ public:
     friend class SpectrumAccumulator;
 
     private:
-        SpectrumAccumulator::AccumulationMode m_mode;
+        AccumulationMode m_mode;
         int m_targetCountValue;
         int m_timeoutValueSeconds;
         int m_continuousIntervalSeconds;
@@ -83,6 +76,8 @@ public slots:
     void adjustTargetTime(int secondsDelta);
     void adjustTargetCount(int countDelta);
     void setTargetCount(int count);
+    void setTargetTime(int time);
+    void setIntervalTime(int time);
     void start();
     void stop();
 
@@ -92,7 +87,7 @@ signals:
     // void accumulationComplete(const AccumulationResult& finalResult); // REMOVED
 
 public: // Added public section for getters
-    AccumulationResult& getCurrentAccumulationResult(); // ADDED: Non-const getter
+    AccumulationResult& getCurrentResult(); // ADDED: Non-const getter
     AccumulatorState getCurrentState() const;           // ADDED/ENSURED
     AccumulationMode getCurrentMode() const;            // ADDED/ENSURED
     int getAcqTime() const;
@@ -121,7 +116,7 @@ private:
     std::shared_ptr<Spectrum> m_accumulatedSpectrum_Spectrum;
     std::shared_ptr<HwSpectrum> m_accumulatedSpectrum_HwSpectrum;
 
-    AccumulationResult m_currentResultSnapshot; // ADDED
+    AccumulationResult m_curResult; // ADDED
 
     QTimer* m_accumulationTimer;
     // QDateTime m_startTime; // REMOVED

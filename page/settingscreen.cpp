@@ -3,6 +3,7 @@
 #include "util/util.h"                      // For nucare::logI
 #include "component/componentmanager.h"     // For ComponentManager
 #include "component/navigationcomponent.h"  // For NavigationComponent
+#include "component/settingmanager.h"
 #include "model/settingmodel.h"
 #include "widget/settingitemdelegate.h"
 #include "widget/ChoicesDialog.h"
@@ -72,6 +73,9 @@ void SettingScreen::setupListItems() {
 
     if (!m_subSetting) return;
 
+    auto settingMgr = ComponentManager::instance().settingManager();
+    int index = 0;
+
     if (auto nodes = m_subSetting->getNodes()) {
         for (auto setting : *nodes) {
             if (auto action = setting->getAction()) {
@@ -79,6 +83,15 @@ void SettingScreen::setupListItems() {
                     QMetaObject::invokeMethod(this, action, Q_ARG(BaseSettingItem*, setting));
                 });
             }
+            if (setting->getShowValue()) {
+                settingMgr->subscribeKey(setting->getKey(), this, [this, setting, index](setting::SettingManager* mgr, auto key) {
+                    setting->setValue(mgr->getSetting(key));
+                    auto qIndex = m_settingModel->index(index, 0);
+                    emit m_settingModel->dataChanged(qIndex, qIndex);
+                });
+            }
+
+            index++;
         }
         m_settingModel->setData(nodes);
     }
@@ -117,6 +130,12 @@ void SettingScreen::setupViewActions() {
     }));
 }
 
+void SettingScreen::saveSetting(QString& key, QVariant& value) {
+    if (auto entry = ComponentManager::instance().settingManager()->getEntry(key)) {
+        entry->setValue(value);
+    }
+}
+
 void SettingScreen::openSubSetting(BaseSettingItem* item) {
     if (auto subs = qobject_cast<SubSettingItem*>(item)) {
         auto entry = (new navigation::NavigationEntry(navigation::CHILD_IN_WINDOW))->setHost(this->parent());
@@ -125,21 +144,22 @@ void SettingScreen::openSubSetting(BaseSettingItem* item) {
     }
 }
 
-void SettingScreen::handleSoundSetting(BaseSettingItem* item) {
-    nucare::logI() << "Handling Sound Setting (Navigation Not Implemented)";
-    // NavigationComponent* navComp = ComponentManager::instance().navigationComponent();
-    // if (navComp) navComp->navigateTo(new SoundPage(this)); // Assuming SoundPage exists
-}
-
-void SettingScreen::handleWifiSetting(BaseSettingItem* item) {
-    nucare::logI() << "Handling WiFi Setting (Navigation Not Implemented)";
-    // NavigationComponent* navComp = ComponentManager::instance().navigationComponent();
-    // if (navComp) navComp->navigateTo(new WifiPage(this)); // Assuming WifiPage exists
-}
-
 void SettingScreen::openChoice(BaseSettingItem* item) {
     auto choices = qobject_cast<ChoiceSettingItem*>(item);
-    navigation::toChoiceDlg(this, new ChoicesDialogArgs(choices->getChoices(), item->getName()));
+    auto entry   = navigation::toChoiceDlg(this, new ChoicesDialogArgs(choices->getChoices(), item->getName()));
+    auto dlg     = dynamic_cast<ChoicesDialog*>(entry->view);
+    auto key     = item->getKey();
+    dlg->setTitle(item->getName());
+
+    if (!key.isEmpty()) {
+        connect(dlg, &QDialog::accepted, this, [this, dlg, item]() {
+            auto selection = dlg->curChoice();
+            if (!selection.isNull()) {
+                auto key = item->getKey();
+                saveSetting(key, selection);
+            }
+        });
+    }
 }
 
 void SettingScreen::openBackground(BaseSettingItem *)

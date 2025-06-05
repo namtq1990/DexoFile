@@ -42,11 +42,14 @@ const char* ConfigEntry::getKey() const
     return m_key;
 }
 
-void ConfigEntry::setValue(QVariant newValue)
+void ConfigEntry::setValue(QVariant newValue, bool saveNow)
 {
     if (m_value != newValue) {
         m_value = newValue;
         if (m_manager) {
+            if (saveNow)
+                m_manager->saveSetting(m_key, m_value);
+
             emit itemValueChanged(m_manager, m_key);
         } else {
             nucare::logD() << "ConfigEntry:" << m_key << "value changed but no manager set to emit signal.";
@@ -90,7 +93,9 @@ SubSettingItem* setting::buildSettingTree() {
                                            {"600", 600},
                                        }),
                                        ret))
-                    ->setName("Measure Time"),
+                    ->setName("Measure Time")
+                    ->setShowValue(true)
+                    ->setKey(SettingManager::KEY_ACQTIME_BGR),
                 (new InfoSettingItem(ret))->setName("Measure Background")->setClickAction("openBackground"),
             })
             ->setName("Background"),
@@ -105,30 +110,52 @@ SubSettingItem* setting::buildSettingTree() {
                          {"500000", 500000},
                      },
                      ret))
-                    ->setName("Calibration Count"),
-                (new InfoSettingItem(ret))->setName("Energy Calibration with Cs137, Co60")->setClickAction("openCalibCo60"),
-                (new InfoSettingItem(ret))->setName("Energy Calibration with Cs137")->setClickAction("openCalibEstCs137"),
+                    ->setShowValue(true)
+                    ->setName("Calibration Count")
+                    ->setKey(SettingManager::KEY_CALIB_COUNT),
+                (new InfoSettingItem(ret))->setName("Calibration with Cs137, Co60")->setClickAction("openCalibCo60"),
+                (new InfoSettingItem(ret))->setName("Calibration with Cs137")->setClickAction("openCalibEstCs137"),
                 (new ChoiceSettingItem(
                      {
                          {"Eu-152", "Eu-152"},
                          {"Ba-133​", "Ba-133​"},
                      },
                      ret))
-                    ->setName("Selec Source"),
+                    ->setShowValue(true)
+                    ->setName("Selec Source")
+                    ->setKey(SettingManager::KEY_NDT_SRC),
             })
             ->setName("Calibration"),
         (new SubSettingItem(ret))
             ->setSettings({
-                (new ChoiceSettingItem({}, ret))->setName("Material"),
-                (new ChoiceSettingItem({}, ret))->setName("Density"),
-                (new ChoiceSettingItem({}, ret))->setName("Thickness"),
-                (new ChoiceSettingItem({}, ret))->setName("Diameter"),
+                (new ChoiceSettingItem({}, ret))
+                    ->setName("Material")
+                    ->setKey(SettingManager::KEY_PIPE_MATERIAL)
+                    ->setShowValue(true),
+                (new ChoiceSettingItem({}, ret))
+                    ->setName("Density")
+                    ->setKey(SettingManager::KEY_PIPE_DENSITY)
+                    ->setShowValue(true),
+                (new ChoiceSettingItem({}, ret))
+                    ->setName("Thickness")
+                    ->setKey(SettingManager::KEY_PIPE_THICKNESS)
+                    ->setShowValue(true),
+                (new ChoiceSettingItem({}, ret))
+                    ->setName("Diameter")
+                    ->setKey(SettingManager::KEY_PIPE_DIAMETER)
+                    ->setShowValue(true),
             })
             ->setName("Pipe Information"),
         (new SubSettingItem(ret))
             ->setSettings({
-                (new ChoiceSettingItem({}, ret))->setName("Measurement Time"),
-                (new ChoiceSettingItem({}, ret))->setName("Measurement Interval Time"),
+                (new ChoiceSettingItem({{"60", 60}, {"120", 120}, {"180", 180}, {"300", 300}, {"600", 600}}, ret))
+                    ->setShowValue(true)
+                    ->setName("Measurement Time")
+                    ->setKey(SettingManager::KEY_ACQTIME_ID),
+                (new ChoiceSettingItem({{"10", 10}, {"3600", 3600}}, ret))
+                    ->setName("Measurement Interval Time")
+                    ->setKey(SettingManager::KEY_MEASURE_INVERVAL)
+                    ->setShowValue(true),
             })
             ->setName("Measurement Setup"),
         (new InfoSettingItem(ret))
@@ -160,7 +187,6 @@ SettingManager::SettingManager(QObject *parent)
     // Register all ConfigEntry members in the map and connect their signals
     auto connectAndRegister = [&](ConfigEntry* entry) {
         m_settingItems[entry->getKey()] = entry;
-        connect(entry, &ConfigEntry::itemValueChanged, this, &SettingManager::onConfigEntryValueChanged);
     };
 
     connectAndRegister(m_increaseTime);
@@ -192,7 +218,7 @@ void SettingManager::initialize()
     }
 }
 
-void SettingManager::saveSetting(const char* key, const QVariant& value)
+void SettingManager::saveSetting(const QString &key, const QVariant& value)
 {
     if (m_databaseManager) {
         m_databaseManager->setSetting(key, value);
@@ -201,7 +227,7 @@ void SettingManager::saveSetting(const char* key, const QVariant& value)
     }
 }
 
-QVariant SettingManager::getSetting(const char* key, const QVariant& defaultValue) const
+QVariant SettingManager::getSetting(const QString &key, const QVariant& defaultValue) const
 {
     if (m_databaseManager) {
         return m_databaseManager->getSetting(key, defaultValue);
@@ -232,13 +258,11 @@ void SettingManager::loadSettings()
 
     QMap<QString, QVariant> allSettings = m_databaseManager->getAllSettings();
     for (auto it = m_settingItems.constBegin(); it != m_settingItems.constEnd(); ++it) {
-        const char* key = it.key();
+        auto& key = it.key();
         ConfigEntry* entry = it.value();
         if (allSettings.contains(key)) {
             // Temporarily disconnect to avoid re-saving during load
-            disconnect(entry, &ConfigEntry::itemValueChanged, this, &SettingManager::onConfigEntryValueChanged);
-            entry->setValue(allSettings.value(key));
-            connect(entry, &ConfigEntry::itemValueChanged, this, &SettingManager::onConfigEntryValueChanged);
+            entry->setValue(allSettings.value(key), false);
             nucare::logD() << "Setting loaded:" << key << "=" << entry->getValue();
         } else {
             // If not in DB, save current default value to DB
@@ -248,7 +272,7 @@ void SettingManager::loadSettings()
     }
 }
 
-ConfigEntry* SettingManager::getEntry(const char* key) const
+ConfigEntry* SettingManager::getEntry(const QString& key) const
 {
     return m_settingItems.value(key, nullptr);
 }

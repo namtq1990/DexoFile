@@ -33,7 +33,7 @@ public:
     const char* getKey() const;
 
     // Setter for value, emits signal on change
-    void setValue(QVariant newValue);
+    void setValue(QVariant newValue, bool saveNow = true);
 
     // Setter for manager (can be set after construction)
     void setManager(SettingManager* manager);
@@ -41,6 +41,9 @@ public:
 signals:
     // Signal emitted when the value of this config entry changes
     void itemValueChanged(SettingManager* manager, const char* key);
+
+private:
+    friend class SettingManager;
 };
 
 class SettingManager : public QObject, public Component
@@ -48,8 +51,8 @@ class SettingManager : public QObject, public Component
     Q_OBJECT
 public:
     void initialize(); // Add initialize method
-    void saveSetting(const char* key, const QVariant& value); // Add saveSetting method
-    QVariant getSetting(const char* key, const QVariant& defaultValue = QVariant()) const; // Add getSetting method
+    void saveSetting(const QString& key, const QVariant& value); // Add saveSetting method
+    QVariant getSetting(const QString& key, const QVariant& defaultValue = QVariant()) const; // Add getSetting method
 
     static constexpr const char* KEY_INCREASE_TIME = "increaseTime";
  static constexpr const char* KEY_ACQTIME_BGR = "acqtime_background";
@@ -67,7 +70,7 @@ public:
  virtual ~SettingManager();
 
     // Method to retrieve a config entry by its key
-    ConfigEntry* getEntry(const char* key) const;
+    ConfigEntry* getEntry(const QString& key) const;
 
     // Specific getters for setting values
     int getIncreaseTime() const;
@@ -81,6 +84,17 @@ public:
     double getPipeThickness() const;
     double getPipeDiameter() const;
 
+    template <class ... Args>
+    auto subscribeKey(const QString& key, Args... args) {
+        if (auto entry = getEntry(key)) {
+            auto ret = connect(entry, &ConfigEntry::itemValueChanged, args...);
+            emit entry->itemValueChanged(this, entry->m_key);
+            return ret;
+        }
+
+        return QMetaObject::Connection();
+    }
+
 private slots:
     void onConfigEntryValueChanged(setting::SettingManager* manager, const char* key); // Slot to handle value changes
 
@@ -88,7 +102,7 @@ private:
     nucare::DatabaseManager* m_databaseManager = nullptr; // Pointer to DatabaseManager
 
     // Map to store config entries, allowing lookup by key
-    QMap<const char*, ConfigEntry*> m_settingItems;
+    QMap<QString, ConfigEntry*> m_settingItems;
 
     ConfigEntry* m_increaseTime;
     ConfigEntry* m_acqTimeBgr;
