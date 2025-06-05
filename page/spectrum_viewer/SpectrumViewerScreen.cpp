@@ -5,7 +5,7 @@
  *      Author: quangnam
  */
 
-#include "page/SpectrumViewerScreen.h"
+#include "SpectrumViewerScreen.h"
 #include "config.h"
 #include "base/basedialog.h"
 #include "component/componentmanager.h"
