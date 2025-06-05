@@ -5,7 +5,7 @@
  *      Author: quangnam
  */
 
-#include "page/BgrScreen.h"
+#include "BgrScreen.h"
 #include "config.h"
 #include "base/basedialog.h"
 #include "component/componentmanager.h"

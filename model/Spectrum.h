@@ -20,6 +20,7 @@ class Spectrum_t
     double m_totalCount = 0;
     int m_fillCps = 0;
     int m_detID = -1;
+    double m_count_rate = 0.0;
 
    public:
     using Channel  = Data;
@@ -60,6 +61,8 @@ class Spectrum_t
 
     void setDetectorID(int id) noexcept { m_detID = id; }
 
+    void setCountRate(double count_rate) noexcept { m_count_rate = count_rate; }
+
     Data* data() noexcept { return m_data.data(); }
 
     const Data* dataConst() const noexcept { return m_data.data(); }
@@ -83,6 +86,8 @@ class Spectrum_t
 
     int getDetectorID() const noexcept { return m_detID; }
 
+    double getCountRate() const noexcept { return m_count_rate; }
+
     void reset() {
         std::fill(m_data.begin(), m_data.end(), 0);
         m_acqTime = 1;
@@ -90,6 +95,7 @@ class Spectrum_t
         m_totalCount = 0;
         m_fillCps = 0;
         m_detID = -1;
+        m_count_rate = 0.0;
     }
 
     void accumulate(const Spectrum_t<Data, N>& spc) {

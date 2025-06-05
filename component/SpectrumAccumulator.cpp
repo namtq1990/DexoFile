@@ -195,6 +195,11 @@ void SpectrumAccumulator::internalStopAccumulation(bool conditionMet) {
     }
     m_curResult.cps = (m_curResult.executionRealtimeSeconds > 0.00001) ? (finalTotalCount / m_curResult.executionRealtimeSeconds) : 0.0;
 
+    if (m_activeAccumulationType == ActiveSpectrumType::TypeSpectrum && m_curResult.spectrum) {
+        m_curResult.spectrum->setCountRate(m_curResult.cps);
+    }
+    // Note: HwSpectrum does not have setCountRate. If it needs a similar field, it would require changes to HwSpectrum.
+
     // Populate detector, background, and calibration IDs
     auto ncManager = ComponentManager::instance().ncManager();
     if (ncManager) {

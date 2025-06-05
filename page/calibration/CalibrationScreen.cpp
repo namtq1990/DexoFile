@@ -5,7 +5,7 @@
  *      Author: quangnam
  */
 
-#include "page/CalibrationScreen.h"
+#include "CalibrationScreen.h"
 #include "page/CalibAcqDialog.h"
 #include "config.h"
 #include "base/basedialog.h"

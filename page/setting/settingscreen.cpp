@@ -1,4 +1,4 @@
-#include "page/settingscreen.h"
+#include "settingscreen.h"
 #include "widget/baselist.h"
 #include "util/util.h"                      // For nucare::logI
 #include "component/componentmanager.h"     // For ComponentManager

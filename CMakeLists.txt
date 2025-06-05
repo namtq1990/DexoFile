@@ -15,6 +15,11 @@ include_directories(util) # Add util directory for header searches
 include_directories(widget) # Add widget directory for header searches
 include_directories(component) # Add component directory
 include_directories(page) # Add page directory
+include_directories(page/home) # Add home directory for header searches
+include_directories(page/setting) # Add setting directory for header searches
+include_directories(page/bgr) # Add bgr directory for header searches
+include_directories(page/calibration) # Add calibration directory for header searches
+include_directories(page/spectrum_viewer) # Add spectrum_viewer directory for header searches
 include_directories(${Qt${QT_VERSION_MAJOR}_INCLUDE_DIRS} ${QT_QTCORE_INCLUDE_DIRS})
 
 find_package(QT NAMES Qt6 Qt5 COMPONENTS Widgets Core SerialPort Sql REQUIRED)
@@ -108,22 +113,25 @@ set(PROJECT_SOURCES
         model/Spectrum.h
         model/DetectorProp.h
         model/DetectorProp.cpp
-        page/homepage.h
-        page/homepage.cpp
-        page/homepage.ui
-        page/settingscreen.h
-        page/settingscreen.cpp
-        page/BgrScreen.ui
-        page/BgrScreen.h
-        page/BgrScreen.cpp
-        page/SpectrumViewerScreen.ui
-        page/SpectrumViewerScreen.h
-        page/SpectrumViewerScreen.cpp
-        page/CalibrationScreen.ui
-        page/CalibrationScreen.h
-        page/CalibrationScreen.cpp
+        page/home/homepage.h
+        page/home/homepage.cpp
+        page/home/homepage.ui
+        page/setting/settingscreen.h
+        page/setting/settingscreen.cpp
+        page/bgr/BgrScreen.ui
+        page/bgr/BgrScreen.h
+        page/bgr/BgrScreen.cpp
+        page/spectrum_viewer/SpectrumViewerScreen.ui
+        page/spectrum_viewer/SpectrumViewerScreen.h
+        page/spectrum_viewer/SpectrumViewerScreen.cpp
+        page/calibration/CalibrationScreen.ui
+        page/calibration/CalibrationScreen.h
+        page/calibration/CalibrationScreen.cpp
         page/CalibAcqDialog.h
         page/CalibAcqDialog.cpp
+        page/CountRateScreen.h
+        page/CountRateScreen.cpp
+        page/CountRateScreen.ui
         controller/wifi_service.h
         controller/wifi_service.cpp
         controller/platform_controller.h

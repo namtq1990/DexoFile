@@ -1,4 +1,4 @@
-#include "page/homepage.h"
+#include "homepage.h"
 #include "ui_homepage.h"  // Generated UI header
 #include "component/settingmanager.h"
 #include "component/SpectrumAccumulator.h"
