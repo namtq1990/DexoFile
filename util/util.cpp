@@ -62,6 +62,10 @@ QString datetime::formatDuration(int totalSeconds) {
     if (hours > 0) ret << QString::number(hours) << "hrs";
     if (minutes > 0) ret << QString::number(minutes) << "min";
 
+    if (ret.empty()) {
+        ret << QString::number(totalSeconds) << "sec";
+    }
+
     return ret.join("");
 }
 

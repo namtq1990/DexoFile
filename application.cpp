@@ -48,6 +48,8 @@ void Application::initialize()
     QApplication::setStyle(QStyleFactory::create("Fusion"));
     qInstallMessageHandler(customLogHandler);
 
+    setApplicationVersion(APP_VERSION_STRING);
+
     // Initialize all components via ComponentManager, passing 'this' as the parent
     ComponentManager::instance().initializeComponents(this);
 

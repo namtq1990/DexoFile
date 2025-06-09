@@ -84,11 +84,11 @@ public:
     double getPipeThickness() const;
     double getPipeDiameter() const;
 
-    template <class ... Args>
-    auto subscribeKey(const QString& key, Args... args) {
+    template <typename Func>
+    auto subscribeKey(const QString& key, QObject* context, Func&& receiverLambda) {
         if (auto entry = getEntry(key)) {
-            auto ret = connect(entry, &ConfigEntry::itemValueChanged, args...);
-            emit entry->itemValueChanged(this, entry->m_key);
+            auto ret = connect(entry, &ConfigEntry::itemValueChanged, context, std::forward<Func>(receiverLambda));
+            receiverLambda(this, entry->m_key);
             return ret;
         }
 

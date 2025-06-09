@@ -34,6 +34,7 @@ SpectrumAccumulator::SpectrumAccumulator(const Builder& builder, QObject* parent
         nucare::logE() << "SpectrumAccumulator: Mode not set at construction or invalid mode! Mode:" << static_cast<int>(m_mode);
     }
     m_curResult.activeType = m_activeAccumulationType;
+    m_continuousIntervalTimer->setSingleShot(true);
 
     connect(m_accumulationTimer, &QTimer::timeout, this, &SpectrumAccumulator::onAccumulationTimeout);
     connect(m_continuousIntervalTimer, &QTimer::timeout, this, &SpectrumAccumulator::onContinuousIntervalTimeout);
@@ -77,6 +78,11 @@ AccumulationMode SpectrumAccumulator::getCurrentMode() const {
 int SpectrumAccumulator::getAcqTime() const
 {
     return m_timeoutValueSeconds;
+}
+
+int SpectrumAccumulator::getTargetCount() const
+{
+    return m_targetCountValue;
 }
 
 int SpectrumAccumulator::getIntervalTime() const
@@ -181,56 +187,67 @@ void SpectrumAccumulator::internalStopAccumulation(bool conditionMet) {
     }
 
     m_accumulationTimer->stop();
-    transitionToState(AccumulatorState::Completed);
 
-    m_curResult.executionRealtimeSeconds = static_cast<double>(m_curResult.startTime.msecsTo(m_curResult.finishTime)) / 1000.0;
+    if (conditionMet) {
+        // Condition met, transaction completed
 
-    double finalTotalCount = 0;
-    if (m_activeAccumulationType == ActiveSpectrumType::TypeSpectrum && m_curResult.spectrum) {
-        finalTotalCount = static_cast<double>(m_curResult.spectrum->getTotalCount());
-    } else if (m_activeAccumulationType == ActiveSpectrumType::TypeHwSpectrum && m_curResult.hwSpectrum) {
-        finalTotalCount = static_cast<double>(m_curResult.hwSpectrum->getTotalCount());
-    } else {
-        nucare::logW() << "SpectrumAccumulator: No spectrum data in snapshot or type mismatch on stop. ActiveType: " << static_cast<int>(m_activeAccumulationType);
-    }
-    m_curResult.cps = (m_curResult.executionRealtimeSeconds > 0.00001) ? (finalTotalCount / m_curResult.executionRealtimeSeconds) : 0.0;
+        m_curResult.executionRealtimeSeconds = static_cast<double>(m_curResult.startTime.msecsTo(m_curResult.finishTime)) / 1000.0;
 
-    if (m_activeAccumulationType == ActiveSpectrumType::TypeSpectrum && m_curResult.spectrum) {
-        m_curResult.spectrum->setCountRate(m_curResult.cps);
-    }
-    // Note: HwSpectrum does not have setCountRate. If it needs a similar field, it would require changes to HwSpectrum.
+        double finalTotalCount = 0;
+        if (m_activeAccumulationType == ActiveSpectrumType::TypeSpectrum && m_curResult.spectrum) {
+            finalTotalCount = static_cast<double>(m_curResult.spectrum->getTotalCount());
+        } else if (m_activeAccumulationType == ActiveSpectrumType::TypeHwSpectrum && m_curResult.hwSpectrum) {
+            finalTotalCount = static_cast<double>(m_curResult.hwSpectrum->getTotalCount());
+        } else {
+            nucare::logW() << "SpectrumAccumulator: No spectrum data in snapshot or type mismatch on stop. ActiveType: " << static_cast<int>(m_activeAccumulationType);
+        }
+        m_curResult.cps = (m_curResult.executionRealtimeSeconds > 0.00001) ? (finalTotalCount / m_curResult.executionRealtimeSeconds) : 0.0;
 
-    // Populate detector, background, and calibration IDs
-    auto ncManager = ComponentManager::instance().ncManager();
-    if (ncManager) {
-        auto currentDetector = ncManager->getCurrentDetector();
-        if (currentDetector) {
-            auto prop = currentDetector->properties();
-            m_curResult.detectorId = prop->getId();
-            nucare::logD() << "Set detectorId in AccumulationResult: " << m_curResult.detectorId;
+        if (m_activeAccumulationType == ActiveSpectrumType::TypeSpectrum && m_curResult.spectrum) {
+            m_curResult.spectrum->setCountRate(m_curResult.cps);
+        }
+        // Note: HwSpectrum does not have setCountRate. If it needs a similar field, it would require changes to HwSpectrum.
 
-            if (auto bgr = prop->getBackground()) {
-                m_curResult.backgroundId = bgr->id;
-                nucare::logD() << "Set backgroundId in AccumulationResult: " << m_curResult.backgroundId;
+        // Populate detector, background, and calibration IDs
+        auto ncManager = ComponentManager::instance().ncManager();
+        if (ncManager) {
+            auto currentDetector = ncManager->getCurrentDetector();
+            if (currentDetector) {
+                auto prop = currentDetector->properties();
+                m_curResult.detectorId = prop->getId();
+                if (m_curResult.spectrum) {
+                    m_curResult.spectrum->setDetectorID(m_curResult.detectorId);
+                } else if (m_curResult.hwSpectrum) {
+                    m_curResult.hwSpectrum->setDetectorID(m_curResult.detectorId);
+                }
+
+                nucare::logD() << "Set detectorId in AccumulationResult: " << m_curResult.detectorId;
+
+                if (auto bgr = prop->getBackground()) {
+                    m_curResult.backgroundId = bgr->id;
+                    nucare::logD() << "Set backgroundId in AccumulationResult: " << m_curResult.backgroundId;
+                } else {
+                    m_curResult.backgroundId = -1;
+                }
+
+                if (auto calib = prop->getCalibration()) {
+                    m_curResult.calibrationId = calib->getId();
+                } else {
+                    m_curResult.calibrationId = -1;
+                }
             } else {
+                m_curResult.detectorId = -1;
                 m_curResult.backgroundId = -1;
-            }
-
-            if (auto calib = prop->getCalibration()) {
-                m_curResult.calibrationId = calib->getId();
-            } else {
                 m_curResult.calibrationId = -1;
             }
         } else {
             m_curResult.detectorId = -1;
             m_curResult.backgroundId = -1;
             m_curResult.calibrationId = -1;
+            nucare::logW() << "NcManager instance not found! Setting all IDs in AccumulationResult to -1.";
         }
-    } else {
-        m_curResult.detectorId = -1;
-        m_curResult.backgroundId = -1;
-        m_curResult.calibrationId = -1;
-        nucare::logW() << "NcManager instance not found! Setting all IDs in AccumulationResult to -1.";
+
+        transitionToState(AccumulatorState::Completed);
     }
 
     nucare::logI() << "SpectrumAccumulator: Internal accumulation stopped. Condition met: " << conditionMet << ". Final CPS: " << m_curResult.cps;

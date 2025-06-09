@@ -642,11 +642,11 @@ int DatabaseManager::insertCalibration(const Calibration* calibration)
     query.bindValue(":time", calibration->getDate().toString(Qt::ISODate)); // 'time' in schema maps to 'date' in model
     query.bindValue(":temperature", calibration->temperature());
 
-    // No spectrum binding for calibration as per user feedback
-    // query.bindValue(":spectrum", spectrumData);
+
+    auto spectrumData = calibration->spc() ? calibration->spc()->toString() : "";
+    query.bindValue(":spectrum", spectrumData);
 
     if (!executeQuery(query, "Inserting new calibration")) {
-        // Redundant log removed: logE() << query.lastError().text();
         return -1;
     }
     return query.lastInsertId().toInt();
@@ -752,7 +752,7 @@ QSqlQuery DatabaseManager::executeSingleRowQuery(const QString& queryString, con
 
 std::shared_ptr<Background> DatabaseManager::getLatestBackground(int detectorId)
 {
-    QString queryString = "SELECT id, spectrum, acqTime, realTime, detectorId, date FROM background WHERE detectorId = :detectorId ORDER BY date DESC LIMIT 1";
+    QString queryString = "SELECT id, spectrum, acqTime, realTime, detectorId, date FROM background WHERE detectorId = :detectorId ORDER BY id DESC LIMIT 1";
     QVariantMap bindValues;
     bindValues[":detectorId"] = detectorId;
 
@@ -779,7 +779,7 @@ std::shared_ptr<Background> DatabaseManager::getLatestBackground(int detectorId)
 
 std::shared_ptr<Calibration> DatabaseManager::getLatestCalibration(int detectorId)
 {
-    QString queryString = "SELECT id, detector_id, coef_a, coef_b, coef_c, gc, ratio, chpeak_a, chpeak_b, chpeak_c, time, temperature FROM calibration WHERE detector_id = :detector_id ORDER BY time DESC LIMIT 1";
+    QString queryString = "SELECT id, detector_id, coef_a, coef_b, coef_c, gc, ratio, chpeak_a, chpeak_b, chpeak_c, time, temperature FROM calibration WHERE detector_id = :detector_id ORDER BY id DESC LIMIT 1";
     QVariantMap bindValues;
     bindValues[":detector_id"] = detectorId;
 

@@ -85,7 +85,8 @@ void SettingScreen::setupListItems() {
             }
             if (setting->getShowValue()) {
                 settingMgr->subscribeKey(setting->getKey(), this, [this, setting, index](setting::SettingManager* mgr, auto key) {
-                    setting->setValue(mgr->getSetting(key));
+                    auto entry = mgr->getEntry(key);
+                    setting->setValue(entry->getValue());
                     auto qIndex = m_settingModel->index(index, 0);
                     emit m_settingModel->dataChanged(qIndex, qIndex);
                 });

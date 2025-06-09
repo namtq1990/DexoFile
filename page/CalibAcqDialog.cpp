@@ -13,11 +13,11 @@ CalibAcqDialog::CalibAcqDialog(QString tag, QWidget *parent) : ChoicesDialog(tag
     setTitle("Calibration Count\n(unit: n x 1000)");
 //    auto choiceData = shared_ptr<QMap<QString, QVariant>>(new QMap<QString, QVariant>());
     Choices choiceData = {
-        {"100", "100000"},
-        {"200", "200000"},
-        {"300", "300000"},
-        {"400", "400000"},
-        {"500", "500000"}
+        {"100", 100000},
+        {"200", 200000},
+        {"300", 300000},
+        {"400", 400000},
+        {"500", 500000}
     };
 
     setData(choiceData);

@@ -55,11 +55,26 @@ HomePage::HomePage(QWidget* parent) : BaseScreen(tag::HOME_TAG, parent), ui(new 
     connect(m_accumulator.get(), &SpectrumAccumulator::stateChanged, this, &HomePage::stateChanged);
     connect(m_accumulator.get(), &SpectrumAccumulator::accumulationUpdated, this, &HomePage::updateEvent);
 
-    settingMgr->subscribeKey(SettingManager::KEY_ACQTIME_ID, (QObject*)this, [this](setting::SettingManager* mgr, auto) {
+    settingMgr->subscribeKey(SettingManager::KEY_ACQTIME_ID, (QObject*) this, [this](setting::SettingManager* mgr, auto) {
         setMeasureTime(mgr->getAcqTimeId());
     });
-    settingMgr->subscribeKey(SettingManager::KEY_MEASURE_INVERVAL, (QObject*)this, [this](SettingManager* mgr, auto) {
+    settingMgr->subscribeKey(SettingManager::KEY_MEASURE_INVERVAL, static_cast<QObject*>(this), [this](SettingManager* mgr, auto) {
         setIntervalTime(mgr->getMeasureInterval());
+    });
+    settingMgr->subscribeKey(SettingManager::KEY_PIPE_MATERIAL, static_cast<QObject*>(this), [this](SettingManager* mgr, auto) {
+        setPipeMaterial(mgr->getPipeMaterial());
+    });
+    settingMgr->subscribeKey(SettingManager::KEY_PIPE_DIAMETER, static_cast<QObject*>(this), [this](SettingManager* mgr, auto) {
+        setPipeDiameter(mgr->getPipeDiameter());
+    });
+    settingMgr->subscribeKey(SettingManager::KEY_PIPE_THICKNESS, static_cast<QObject*>(this), [this](SettingManager* mgr, auto) {
+        setPipeThickness(mgr->getPipeThickness());
+    });
+    settingMgr->subscribeKey(SettingManager::KEY_PIPE_DENSITY, static_cast<QObject*>(this), [this](SettingManager* mgr, auto) {
+        setPipeDensity(mgr->getPipeDensity());
+    });
+    settingMgr->subscribeKey(SettingManager::KEY_NDT_SRC, static_cast<QObject*>(this), [this](SettingManager* mgr, auto) {
+        setIsotope(mgr->getNdtSource());
     });
 
     stateChanged(getState());
@@ -101,7 +116,33 @@ void HomePage::setMeasureTime(int sec)
     if (m_accumulator) {
         m_accumulator->setTargetTime(sec);
         ui->stopTimeValueLabel->setText(datetime::formatDate_yyyyMMdd_HHmm(m_accumulator->getCurrentResult().finishTime));
+        ui->measureTimeValueLabel->setText(datetime::formatDuration(sec));
     }
+}
+
+void HomePage::setIsotope(const QString &src)
+{
+    ui->isotopeLabel->setText(src);
+}
+
+void HomePage::setPipeMaterial(const QString &material)
+{
+    ui->materialLabel->setText(QString("Material: %1").arg(material));
+}
+
+void HomePage::setPipeDiameter(double diameter)
+{
+    ui->diameterLabel->setText(QString("Diameter: %1mm").arg(diameter, 0, 'f', 1));
+}
+
+void HomePage::setPipeThickness(double thickness)
+{
+    ui->thicknessLabel->setText(QString("Thickness: %1mm").arg(thickness, 0, 'f', 1));
+}
+
+void HomePage::setPipeDensity(double density)
+{
+    ui->densityLabel->setText(QString("Density: %1g/cc").arg(density, 0, 'f', 1));
 }
 
 void HomePage::stateChanged(AccumulatorState state)
@@ -130,8 +171,6 @@ void HomePage::stateChanged(AccumulatorState state)
         ui->etTitleLabel->hide();
         ui->etValueLabel->hide();
 
-        ui->measureTimeValueLabel->setText(QString("%1 min").arg(m_accumulator->getAcqTime()));
-
         break;
     }
     case AccumulatorState::Measuring: {
@@ -156,13 +195,14 @@ void HomePage::stateChanged(AccumulatorState state)
         auto ret = m_accumulator->getCurrentResult();
 
         auto dbManager = ComponentManager::instance().databaseManager();
+        auto settingMgr = ComponentManager::instance().settingManager();
         Event event;
 
         // Populate Event object
         event.setSoftwareVersion(QApplication::applicationVersion()); // Or a more appropriate version
         event.setStartedTime(ret.startTime);
         event.setFinishedTime(ret.finishTime);
-        event.setLiveTime(ret.finishTime.secsTo(ret.startTime));
+        event.setLiveTime(ret.startTime.secsTo(ret.finishTime));
         event.setAvgCps(ret.avgCPS);
         event.setMaxCps(ret.maxCPS);
         event.setMinCps(ret.minCPS);
@@ -203,7 +243,9 @@ void HomePage::stateChanged(AccumulatorState state)
         event.setE2Energy(0);     // Default value
         event.setE2Branching(0);  // Default value
         event.setE2Netcount(0);   // Default value
-
+        event.setPipeMaterial(settingMgr->getPipeMaterial());
+        event.setPipeDiameter(settingMgr->getPipeDiameter());
+        event.setPipeThickness(settingMgr->getPipeThickness());
 
         // Insert event data
         if (dbManager) {

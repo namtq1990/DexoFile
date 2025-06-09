@@ -30,6 +30,11 @@ public:
 
     void setIntervalTime(int sec);
     void setMeasureTime(int sec);
+    void setIsotope(const QString& src);
+    void setPipeMaterial(const QString& material);
+    void setPipeDiameter(double diameter);
+    void setPipeThickness(double thickness);
+    void setPipeDensity(double density);
 
 public slots:
     void stateChanged(AccumulatorState);

@@ -127,11 +127,16 @@ void CalibrationScreen::onRecvSpectrum()
 {
     if (!m_counter) return;
     if (m_counter->getCurrentState() == AccumulatorState::Measuring) {
+
         auto& ret = m_counter->getCurrentResult();
         ui->acqCounter->setText(QString("%1 / %2")
                                 .arg(ret.count, 2, 10, QChar('0'))
                                 .arg(m_counter->getAcqTime()));
-        ui->count->setText(QString("%1K").arg(ret.hwSpectrum->getTotalCount() / 1000, 3, 'f', 1));
+        auto counterTxt = QString("%1K / %2K")
+                .arg(QString::number(ret.hwSpectrum->getTotalCount() / 1000, 'f', 1))
+                .arg((int) m_counter->getTargetCount() / 1000, 2, 10, QChar('0'));
+        ui->acqCounter->setText(counterTxt);
+        ui->acqTime->setText(QString("%1").arg(ret.count, 2, 10, QChar('0')));
         ui->cps->setText(QString::number((int) ret.cps));
         ui->chart->setData(ret.hwSpectrum); // Assuming HwSpectrumView has a setData method similar to SpectrumView
     }

@@ -49,7 +49,7 @@ void NcManager::updateCalibFromRawPeak(Calibration *calib, const Coeffcients &fo
     }
 
     calib->setChCoefficients(convCoeff);
-    calib->setDate(nucare::Timestamp());
+    calib->setDate(QDateTime::currentDateTime());
 }
 
 void NcManager::computeCalibration(nucare::DetectorComponent *dev, std::shared_ptr<Spectrum> spc,
@@ -126,6 +126,7 @@ void NcManager::computeCalibration(nucare::DetectorComponent *dev, std::shared_p
     ret->setTemperature(prop->getRawTemperature());
     ret->setGC(prop->getGC());
     ret->setDetectorId(prop->getId());
+    ret->setDate(QDateTime::currentDateTime());
 
     dbManager->insertCalibration(ret.get());
     prop->setCalibration(ret);

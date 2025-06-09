@@ -137,5 +137,14 @@ void BackgroundScreen::onRecvBacground()
         return;
     }
 
-    nucare::logD() << "Background Saved." << m_counter->getCurrentResult().cps;
+    auto dbMgr = ComponentManager::instance().databaseManager();
+    auto bgr = std::make_shared<Background>();
+    auto date = QDateTime::currentDateTime();
+    bgr->date = datetime::formatIsoDate(date);
+    bgr->spc = m_counter->getCurrentResult().spectrum;
+    bgr->id = dbMgr->insertBackground(bgr.get());
+
+    if (bgr->id > 0) {
+        showConfirmDlg();
+    }
 }
