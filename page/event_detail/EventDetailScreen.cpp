@@ -42,7 +42,7 @@ void EventDetailScreen::bindEvent(std::shared_ptr<Event> event)
     auto timeStart = event->getStartedTime();
     auto timeFinish = event->getFinishedTime();
     ui->idLabel->setText(QString("#%1").arg(event->getId()));
-    ui->measureTimeValueLabel->setText(datetime::formatDuration(event->getAcqTime()));
+    ui->measureTimeValueLabel->setText(datetime::formatDuration(event->getLiveTime()));
     ui->startTimeValueLabel->setText(datetime::formatDate_yyyyMMdd_HHmm(timeStart));
     ui->stopTimeValueLabel->setText(datetime::formatDate_yyyyMMdd_HHmm(timeFinish));
     ui->materialLabel->setText(QString("Material: %1").arg(event->getPipeMaterial()));

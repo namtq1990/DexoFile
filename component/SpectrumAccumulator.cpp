@@ -145,7 +145,7 @@ void SpectrumAccumulator::internalStartAccumulation() {
     m_curResult.finishTime = m_curResult.startTime.addSecs(m_timeoutValueSeconds); // Initialize finish time
 //    m_currentResultSnapshot.finishTime = QDateTime::fromSecsSinceEpoch(m_currentResultSnapshot.startTime.toSecsSinceEpoch() + m_timeoutValueSeconds);
 
-    m_curResult.executionRealtimeSeconds = 0.0;
+    m_curResult.executionRealtimeSeconds = 0;
     m_curResult.cps = 0.0;
     m_curResult.activeType = m_activeAccumulationType; // Ensure activeType is set in snapshot
 

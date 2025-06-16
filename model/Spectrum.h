@@ -2,6 +2,7 @@
 #define INCLUDE_MODEL_SPECTRUM_H_
 
 #include "config.h"
+#include "Types.h"
 #include "util/nc_exception.h"
 
 #include <stddef.h>
@@ -260,9 +261,25 @@ class Spectrum_t
 
         }
     }
+
+    static auto channelToEnergy(const Channel channel, const Coeffcients &params) {
+        return POLY(channel, params[0], params[1], params[2]);
+    }
+
+    static auto energyToFWHM(const Energy energy, const FWHM &fwhm)
+    {
+        return fwhm[0] * sqrt(energy) + fwhm[1];
+    }
+
+    static auto channelToFWHM(const Channel channel, const FWHM& fwhm, const Coeffcients& coeff)
+    {
+        Energy energy = std::max(channelToEnergy(channel, coeff), (Energy) 1.0);
+        return energyToFWHM(energy, fwhm);
+    }
 };
 
-typedef Spectrum_t<float, nucare::CHSIZE> Spectrum;
-typedef Spectrum_t<float, nucare::HW_CHSIZE> HwSpectrum;
+typedef Spectrum_t<double, nucare::CHSIZE> Spectrum;
+typedef Spectrum_t<double, nucare::HW_CHSIZE> HwSpectrum;
+typedef Spectrum_t<double, nucare::BINSIZE> BinSpectrum;
 
 #endif /* INCLUDE_MODEL_SPECTRUM_H_ */

@@ -18,6 +18,15 @@
 // You could also add build date/time if needed, e.g., using __DATE__ and __TIME__
 // #define APP_BUILD_TIMESTAMP __DATE__ " " __TIME__
 
+#define POLY1(x, a0) (a0)
+#define POLY2(x, a1, a0) (a1 * (x) + a0)
+#define POLY3(x, a2, a1, a0) (a2 * (x) * (x) + a1 * (x) + a0)
+#define POLY4(x, a3, a2, a1, a0) (a3 * (x) * (x) * (x) + a2 * (x) * (x) + a1 * (x) + a0)
+#define GET_POLY_MACRO(_1,_2,_3,_4,NAME,...) NAME
+#define POLY(x, ...) GET_POLY_MACRO(__VA_ARGS__, POLY4, POLY3, POLY2, POLY1)(x, __VA_ARGS__)
+
+
+
 namespace nucare {
 constexpr int CHSIZE = 1024;
 constexpr int HW_CHSIZE = 2048;
@@ -46,6 +55,8 @@ constexpr const char* CHOICE_TAG  = "ChoiceDlg";
 constexpr const char* ACQ_TIME_TAG = "AcqTimeDlg";
 constexpr const char* EVENTS_TAG = "EventList";
 constexpr const char* EVENT_DETAIL_TAG = "EventDetailScreen";
+constexpr const char* SHUTDOWN_DLG = "Shutdown_dlg";
+constexpr const char* SW_VERSION = "SwVersionDlg";
 }  // namespace tag
 
 namespace ui {

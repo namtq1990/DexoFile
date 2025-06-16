@@ -245,7 +245,8 @@ BaseView* navigation::NavigationComponent::curScreen(const bool& isRecursive) {
 NavigationEntry* navigation::NavigationComponent::curEntry(const bool &isRecursive) {
     if (!getBackstack().empty()) {
         const auto entry = mBackstacks.back();
-        if (isRecursive && entry->childNav != nullptr) {     // This Navigation has child Nav
+        if (isRecursive && entry->childNav != nullptr
+                && !entry->childNav->mBackstacks.empty()) {     // This Navigation has child Nav
             return entry->childNav->curEntry(isRecursive);
         } else {
             return entry;

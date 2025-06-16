@@ -21,6 +21,7 @@ class SubSettingItem;
 class ChoicesDialogArgs;
 class SpectrumAccumulator;
 class EventDetailArgs;
+class AcqTimeArgs;
 
 namespace navigation {
 
@@ -198,6 +199,9 @@ NavigationEntry* toCalibCountDlg(BaseView* parent, const QString& = tag::CHOICE_
 NavigationEntry* toSpectrumViewer(BaseView* parent, std::shared_ptr<SpectrumAccumulator> accumulator);
 NavigationEntry* toEventList(BaseView* parent, const QString& = tag::EVENTS_TAG);
 NavigationEntry* toEventDetail(BaseView* parent, EventDetailArgs* args, const QString& = tag::EVENT_DETAIL_TAG);
+NavigationEntry* toAcqTimeDlg(BaseView* parent, AcqTimeArgs* args, const QString& tag = tag::ACQ_TIME_TAG);
+NavigationEntry* toShutdownDlg(const QString& tag = tag::SHUTDOWN_DLG);
+NavigationEntry* toSwVersion(BaseView* parent, const QString& tag = tag::SW_VERSION);
 
 void showWarning(NavigationComponent* navController,
                  NavigationEntry* entry,

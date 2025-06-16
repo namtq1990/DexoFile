@@ -196,6 +196,7 @@ void HomePage::stateChanged(AccumulatorState state)
 
         auto dbManager = ComponentManager::instance().databaseManager();
         auto settingMgr = ComponentManager::instance().settingManager();
+        auto ncMgr = ComponentManager::instance().ncManager();
         Event event;
 
         // Populate Event object
@@ -226,26 +227,30 @@ void HomePage::stateChanged(AccumulatorState state)
             nucare::logW() << "Calibration ID is -1 in accumulation result.";
         }
 
-        // Placeholder for detailId, will be updated later
-        event.setDetailId(0);
-
         QString spectrumStringData;
+        ClogEstimation clog;
 
         if (ret.spectrum) {
             spectrumStringData = ret.spectrum->toString();
             event.setRealTime(ret.spectrum->getRealTime());
             event.setAvgFillCps(ret.spectrum->getFillCps() / ret.spectrum->getAcqTime());
+
+            clog = ncMgr->estimateClog(ret.spectrum, ncMgr->getCurrentDetector());
         }
 
-        event.setE1Energy(0);     // Default value
-        event.setE1Branching(0);  // Default value
-        event.setE1Netcount(0);   // Default value
-        event.setE2Energy(0);     // Default value
-        event.setE2Branching(0);  // Default value
-        event.setE2Netcount(0);   // Default value
+        auto isotopeProfile = settingMgr->getIsotopeProfile();
+
+        event.setE1Energy(isotopeProfile->threshold_energy.first);
+        event.setE1Branching(isotopeProfile->threshold_branching.first);
+        event.setE1Netcount(clog.netCount1);
+        event.setE2Energy(isotopeProfile->threshold_energy.second);
+        event.setE2Branching(isotopeProfile->threshold_branching.second);
+        event.setE2Netcount(clog.netCount2);
         event.setPipeMaterial(settingMgr->getPipeMaterial());
         event.setPipeDiameter(settingMgr->getPipeDiameter());
         event.setPipeThickness(settingMgr->getPipeThickness());
+        event.setClogThickness(clog.thickness);
+        event.setClogRatio(clog.thickness / settingMgr->getPipeThickness());
 
         // Insert event data
         if (dbManager) {

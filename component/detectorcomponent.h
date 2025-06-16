@@ -32,9 +32,11 @@ public:
     void clearSerialBuffer();
 
     void sendCommand(const QByteArray &command);
+    void nativeSend(const QByteArray& command);
 
     void initialize();
     void sendUpdateCalib(const int ch32, const int ch662, const int chK40);
+    void sendPowerOff();
 
 signals:
     void detectorInfoReceived(DetectorComponent* dev, std::shared_ptr<GcResponse> info);

@@ -6,6 +6,7 @@
 #include "model/DetectorModels.h"
 #include "model/Calibration.h"
 #include "model/Types.h"
+#include "model/ndt_model.h"
 
 namespace nucare { class DetectorComponent; }
 class DetectorPackage;
@@ -24,6 +25,7 @@ public:
                                 std::shared_ptr<HwSpectrum> hwSpc,
                                 Calibration::Mode mode = Calibration::HH300_CS_137,
                                 bool updateStdPeaks = false);
+    ClogEstimation estimateClog(std::shared_ptr<Spectrum> spc, nucare::DetectorComponent* dev);
 
     nucare::DetectorComponent* getCurrentDetector();
 

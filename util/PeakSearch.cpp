@@ -729,18 +729,19 @@ void PeakSearch::TransferFunct(double* out, const int len,
 // 2
 {
 
-    double fit1[CHSIZE];
+    Spectrum fit1;
+    auto chSize = fit1.getSize();
 
     double x = 0;
 
-    for (int i = 0; i < (int) CHSIZE; i++)
+    for (int i = 0; i < chSize; i++)
     {
         x = i ;
         fit1[i] = NcLibrary::channelToFWHM(x, fwhm, coeff);
     }
 
     // resize fit1 from CHSIZE to BINSIZE
-    double sc = (double) CHSIZE / (double) BINSIZE;
+    double sc = chSize / (double) BINSIZE;
 
     double sc0 = sc / 2;
 
@@ -762,6 +763,47 @@ void PeakSearch::TransferFunct(double* out, const int len,
     // normalize
     for (int i = 0; i < BINSIZE; i++) {
         out[i] = out[i] / sum1 * (double)(CHSIZE);
+    }
+}
+
+template<>
+void PeakSearch::TransferFunct(BinSpectrum& out, const FWHM& fwhm, const Coeffcients& coeff) {
+    using Channel = typename BinSpectrum::Channel;
+
+    Spectrum fit1;
+    auto chSize = fit1.getSize();
+
+    Channel x = 0;
+
+    for (int i = 0; i < chSize; i++)
+    {
+        x = i ;
+        fit1[i] = fit1.channelToFWHM(x, fwhm, coeff);
+    }
+
+    // resize fit1 from CHSIZE to BINSIZE
+    Channel sc = chSize / (double) out.getSize();
+
+    Channel sc0 = sc / 2.0;
+
+    int ind = 0;
+    Channel tmp;
+    Channel sum1 = 0;
+    for (int i = 0; i < out.getSize(); i++) {
+        x = i + 1;
+        // reset TF function
+        out[i] = 0;
+        tmp = sc0 + (x - 1) * sc + 1;
+        ind = (int) floor(tmp) - 1;
+        if (ind >= 0 && ind < CHSIZE) {
+            out[i] = fit1[ind];
+            sum1 = sum1 + out[i];
+        }
+    }
+
+    // normalize
+    for (int i = 0; i < out.getSize(); i++) {
+        out[i] = out[i] / sum1 * CHSIZE;
     }
 }
 
@@ -824,6 +866,86 @@ void PeakSearch::BGErosion(double* MSBinSpec, const double* IterCoeff, double* b
     {
         ch = CHArray[ind];
         en = NcLibrary::channelToEnergy(ch, coeff);
+
+        x = en;
+
+        if (en <= 145) {
+            noiter1 = (int) (b2 * x * x + b1 * x + b0);
+        } else {
+            noiter1 = a4 * x * x * x * x + a3 * x * x * x + a2 * x * x + a1 * x + a0;
+        }
+
+        noiter = (int) round(noiter1);
+
+        if (noiter < 2)
+            noiter = 2;
+
+        if (noiter > MaxIter - 1)
+            noiter = MaxIter - 1;
+
+        bgBinOut[ind] = DataEro[noiter - 1][ind];
+    }
+
+}
+
+void PeakSearch::BGErosion(const BinSpectrum &MSBinSpec, const InterCoeff& IterCoeff, BinSpectrum &bgBinOut, const BinSpectrum &TF, const Coeffcients &coeff)
+{
+    auto a4 = IterCoeff[0];
+    auto a3 = IterCoeff[1];
+    auto a2 = IterCoeff[2];
+    auto a1 = IterCoeff[3];
+    auto a0 = IterCoeff[4];
+
+    auto b2 = IterCoeff[5];
+    auto b1 = IterCoeff[6];
+    auto b0 = IterCoeff[7];
+
+
+    Energy x = 0;
+    int noiter = 0;
+
+    int MaxIter = 70; // Defined: MaxNoIter=70+1
+
+    Energy DataEro[MaxIter][BINSIZE];
+    for (int i = 0; i < MaxIter; i++)
+    {
+        memcpy(DataEro[i], MSBinSpec.dataConst(), BINSIZE * sizeof(Energy));
+    }
+
+    // 1st :Erosion and then save array
+    Energy tmp;
+    for (int iter = 0; iter < MaxIter - 1; iter++)
+    {
+        for (int i = 0; i < BINSIZE; i++)
+        {
+            if (i >= 4 && i <= BINSIZE - 5)
+            {
+                tmp = (DataEro[iter][i - 4] + DataEro[iter][i + 4]) / 2;
+                if (DataEro[iter][i] > tmp)
+                {
+                    DataEro[iter][i] = tmp;
+                }
+                // DataEro[iter+1][i] = DataEro[iter][i];
+            }
+            DataEro[iter + 1][i] = DataEro[iter][i];
+        }
+
+    }
+
+    // 2 step:
+
+    BinSpectrum CHArray; // BinSpec[BINSIZE]
+
+    NcLibrary::BinToCh(TF, CHArray);
+
+    double noiter1;
+
+    // iterosion
+    double ch, en;
+    for (int ind = 0; ind < BINSIZE; ind++)
+    {
+        ch = CHArray[ind];
+        en = CHArray.channelToEnergy(ch, coeff);
 
         x = en;
 
@@ -952,11 +1074,132 @@ void PeakSearch::ReturnReBinning(double* BinSpec, double* TF, double* ChOut) {
     }
 }
 
+void PeakSearch::ReturnReBinning(const BinSpectrum &BinSpec, const BinSpectrum &TF, Spectrum &ChOut) {
+    Energy sumz1 = 0, sumz2 = 0, sumz3 = 0, z = 0, sumtmp = 0;
+    int cnt = 0, ind_chn = 0, i = 0;
+    bool First = true, First1 = true;
+
+    int z_int = 0;
+    Energy z_pre_w = 0, z_pre = 0, z_cur = 0, z_res = 0;
+
+    while (true) {
+        cnt = 0;
+        if (TF[i] < 1) {
+            while (true) {
+                z = TF[i + cnt];
+                sumz1 = sumz1 + z;
+
+                if (sumz1 >= 1) {
+                    break;
+                }
+                cnt = cnt + 1;
+            }
+
+            sumz2 = (z - (sumz1 - 1)) / z;
+
+            if (First == true) {
+                First = false;
+
+                sumtmp = 0;
+                for (int j = i; j <= (i + cnt - 1); j++) {
+                    sumtmp = sumtmp + BinSpec[j];
+                }
+                sumtmp = sumtmp + sumz2 * BinSpec[i + cnt];
+
+                ChOut[ind_chn] = sumtmp;
+
+                sumz3 = (sumz1 - 1) / z;
+            } else {
+                sumtmp = 0;
+
+                sumtmp = sumz3 * BinSpec[i - 1];
+
+                for (int j = i; j <= (i + cnt - 1); j++) {
+                    sumtmp = sumtmp + BinSpec[j];
+                }
+                sumtmp = sumtmp + sumz2 * BinSpec[i + cnt];
+
+                ChOut[ind_chn] = sumtmp;
+
+                sumz3 = (sumz1 - 1) / z;
+            }
+
+            sumz1 = sumz1 - 1;
+            ind_chn = ind_chn + 1;
+            i = i + cnt + 1;
+
+            if (i > BINSIZE - 1) {
+                break;
+            }
+        } else {
+
+            z = TF[i];
+
+            if (First1 == true) {
+                First1 = false;
+                z_int = (int) floor(z);
+                z_pre_w = z - z_int;
+                z_pre = z_pre_w / z;
+
+                ChOut[ind_chn] = 1 / z * BinSpec[i];
+                ind_chn = ind_chn + 1;
+                i = i + 1;
+            } else {
+                z_cur = 1 - z_pre_w;
+
+                ChOut[ind_chn] = z_pre * BinSpec[i - 1] + z_cur / z * BinSpec[i];
+                z_res = z - z_cur;
+
+                if (z_res > 1) {
+                    z_int = (int) floor(z_res);
+
+                    for (int j = 1; j <= z_int; j++) {
+                        ind_chn = ind_chn + 1;
+
+                        if (i > BINSIZE - 1) {
+                            break;
+                        }
+
+                        ChOut[ind_chn] = 1 / z * BinSpec[i];
+                    }
+
+                    z_pre_w = z - z_cur - z_int;
+                    z_pre = z_pre_w / z;
+                } else {
+                    z_pre_w = z_res;
+                    z_pre = z_pre_w / z;
+                }
+                ind_chn = ind_chn + 1;
+            }
+            i = i + 1;
+        }
+
+        if (i > BINSIZE - 1) {
+            break;
+        }
+    }
+}
+
 void PeakSearch::BGSubtration(double* MSChSpec, double* ReBinChSpec, Spectrum* PPChSpecOut, const SmoothP& smooth ) {
     Spectrum spc_sub_NB;
     auto data = spc_sub_NB.data();
     double tmp = 0;
     for (nucare::uint i = 0; i < CHSIZE; i++) {
+        tmp = MSChSpec[i] - ReBinChSpec[i];
+        if (tmp < 0)
+            tmp = 0;
+        data[i] = tmp;
+    }
+
+    // smooth function
+    NcLibrary::smoothSpectrum(spc_sub_NB, *PPChSpecOut, smooth);
+}
+
+void PeakSearch::BGSubtration(const Spectrum &MSChSpec, const Spectrum &ReBinChSpec, Spectrum *PPChSpecOut, const SmoothP &smooth) {
+    Spectrum spc_sub_NB;
+    auto data = spc_sub_NB.data();
+    Energy tmp = 0;
+    for (int i = 0; i < CHSIZE; i++) {
         tmp = MSChSpec[i] - ReBinChSpec[i];
         if (tmp < 0)
             tmp = 0;

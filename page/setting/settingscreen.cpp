@@ -180,5 +180,5 @@ void SettingScreen::openCalibEstCs137(std::shared_ptr<BaseSettingItem> item)
 
 void SettingScreen::openSwVersion(BaseSettingItem *item)
 {
-    navigation::showSuccess(this, "SW version: 0.0.1");
+    navigation::toSwVersion(this);
 }

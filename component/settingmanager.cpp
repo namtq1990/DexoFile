@@ -117,8 +117,8 @@ SubSettingItem* setting::buildSettingTree() {
                 (new InfoSettingItem(ret))->setName("Calibration with Cs137")->setClickAction("openCalibEstCs137"),
                 (new ChoiceSettingItem(
                      {
-                         {"Eu-152", "Eu-152"},
-                         {"Ba-133​", "Ba-133​"},
+                         {"Eu-152", IsoProfile::name(IsoProfile::Eu152)},
+                         {"Ba-133​", IsoProfile::name(IsoProfile::Ba133)},
                      },
                      ret))
                     ->setShowValue(true)
@@ -178,7 +178,7 @@ SettingManager::SettingManager(QObject *parent)
       m_acqTime(new ConfigEntry(KEY_ACQTIME_ID, 3600, this)),
       m_measureInterval(new ConfigEntry(KEY_MEASURE_INVERVAL, 7200, this)),
       m_calibCount(new ConfigEntry(KEY_CALIB_COUNT, 100000, this)),
-      m_ndtSource(new ConfigEntry(KEY_NDT_SRC, "Eu-152", this)),
+      m_ndtSource(new ConfigEntry(KEY_NDT_SRC, IsoProfile::Eu152, this)),
       m_pipeMaterial(new ConfigEntry(KEY_PIPE_MATERIAL, "Steel", this)),
       m_pipeDensity(new ConfigEntry(KEY_PIPE_DENSITY, 7.85, this)),
       m_pipeThickness(new ConfigEntry(KEY_PIPE_THICKNESS, 10.0, this)),
@@ -213,6 +213,9 @@ void SettingManager::initialize()
     m_databaseManager = ComponentManager::instance().databaseManager();
     if (m_databaseManager) {
         loadSettings();
+        subscribeKey(KEY_NDT_SRC, this, [](SettingManager* mgr, auto) {
+            mgr->m_isotopeProfile = IsoProfile::fromIsotope(mgr->getIsotope());
+        });
     } else {
         nucare::logE() << "DatabaseManager not available for SettingManager.";
     }
@@ -302,6 +305,11 @@ int SettingManager::getCalibCount() const
     return m_calibCount->getValue().toInt();
 }
 
+IsoProfile::Isotope SettingManager::getIsotope() const
+{
+    return IsoProfile::isotopeFromName(m_ndtSource->getValue().toString().toLatin1());
+}
+
 QString SettingManager::getNdtSource() const
 {
     return m_ndtSource->getValue().toString();
@@ -325,4 +333,9 @@ double SettingManager::getPipeThickness() const
 double SettingManager::getPipeDiameter() const
 {
     return m_pipeDiameter->getValue().toDouble();
+}
+
+IsoProfile *SettingManager::getIsotopeProfile() const
+{
+    return m_isotopeProfile;
 }

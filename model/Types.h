@@ -15,16 +15,17 @@ typedef uint8_t tuint;      // Tiny uint
 
 } // namespace nucare
 
+typedef double Energy;
+typedef std::array<Energy, 3> Coeffcients;
+typedef std::array<Energy, 2> FWHM;
+typedef std::array<Energy, 6> GeCoefficients;
+typedef std::array<Energy, 5> PeakCoefficients;
+typedef std::array<Energy, 2> FHM;
+typedef std::array<Energy, 10> StdEff;
+typedef std::array<Energy, 8> InterCoeff;
 
-typedef std::array<double, 3> Coeffcients;
-typedef std::array<double, 2> FWHM;
-typedef std::array<double, 6> GeCoefficients;
-typedef std::array<double, 5> PeakCoefficients;
-typedef std::array<double, 2> FHM;
-typedef std::array<double, 10> StdEff;
-
-typedef std::pair<double, double> Threshold;
-typedef std::pair<double, double> SmoothP;
+typedef std::pair<Energy, Energy> Threshold;
+typedef std::pair<Energy, Energy> SmoothP;
 
 template<class P>
 using NcSP = std::shared_ptr<P>;

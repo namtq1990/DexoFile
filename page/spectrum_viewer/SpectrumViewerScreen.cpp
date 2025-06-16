@@ -14,6 +14,7 @@
 #include "component/SpectrumAccumulator.h"
 #include "component/ncmanager.h"
 #include "model/DetectorProp.h"
+#include "widget/AcqTimeDialog.h"
 #include "ui_SpectrumViewerScreen.h"
 
 #include <QDialog>
@@ -52,15 +53,20 @@ SpectrumViewerScreen::SpectrumViewerScreen(const QString &tag, QWidget *parent)
     m_counter(nullptr)
 {
     ui->setupUi(this);
-//    auto centerAct = new ViewAction {
-//        .name = translate("TIME"),
-//        .action = [this]() {
-//            getPresenter<SpectrumViewerPresenter>()->toAcqDialog(getChildNavigation(), this);
-//            return true;
-//        },
-//        .icon = ":/images/common/menu_acq_time.png"
-//    };
-//    setCenterAction(centerAct);
+    auto centerAct = new ViewAction(
+        "TIME",
+        [this]() {
+            if (m_counter->getCurrentState() != AccumulatorState::Measuring) {
+                return true;
+            }
+
+            auto args = new AcqTimeArgs();
+            args->accumulator = m_counter.get();
+            navigation::toAcqTimeDlg(this, args);
+            return true;
+        },
+        ":/icons/menu_acq_time");
+    setCenterAction(centerAct);
 
     setupLayout();
 }

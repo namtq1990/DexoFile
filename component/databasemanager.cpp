@@ -181,7 +181,6 @@ bool DatabaseManager::createTablesIfNotExist()
                   "minGamma_nSv REAL, "
                   "avgFillCps REAL, "
                   "detectorId INTEGER, "
-                  "detail_id INTEGER, "
                   "background_id INTEGER, "
                   "calibration_id INTEGER, "
                   "avgCps REAL NOT NULL DEFAULT 0, "
@@ -255,15 +254,9 @@ void DatabaseManager::loadEventDetailsInto(Event* event)
         return;
     }
 
-    long detailId = event->getDetailId();
-    if (detailId <= 0) {
-        logW() << "Event with ID" << event->getId() << "has no valid detail_id. No spectrum to load.";
-        return;
-    }
-
     QSqlQuery query(m_database);
-    query.prepare("SELECT spectrum FROM event_detail WHERE id = :detail_id");
-    query.bindValue(":detail_id", static_cast<qlonglong>(detailId));
+    query.prepare("SELECT spectrum FROM event_detail WHERE event_id = :event_id LIMIT 1");
+    query.bindValue(":event_id", static_cast<qlonglong>(event->getId()));
 
     if (!executeQuery(query, "Fetching event spectrum from event_detail")) {
         // Redundant log removed. Original: logE() << "Failed to query event_detail for event ID" << event->getId() << ":" << query.lastError().text();
@@ -451,7 +444,7 @@ QVector<std::shared_ptr<Event>> DatabaseManager::getEvents(int page, int pageSiz
 {
     QVector<std::shared_ptr<Event>> events;
     QSqlQuery query(m_database);
-    query.prepare("SELECT event_id, softwareVersion, dateBegin, dateFinish, liveTime, realTime, avgGamma_nSv, maxGamma_nSv, minGamma_nSv, avgFillCps, detectorId, detail_id, background_id, calibration_id, avgCps, maxCps, minCps, e1Energy, e1Branching, e1Netcount, e2Energy, e2Branching, e2Netcount, PipeMaterial, PipeThickness, PipeDiameter, ClogMaterial, ClogDensity, ClogThickness, ClogRatio FROM event ORDER BY event_id DESC LIMIT :limit OFFSET :offset");
+    query.prepare("SELECT event_id, softwareVersion, dateBegin, dateFinish, liveTime, realTime, avgGamma_nSv, maxGamma_nSv, minGamma_nSv, avgFillCps, detectorId, background_id, calibration_id, avgCps, maxCps, minCps, e1Energy, e1Branching, e1Netcount, e2Energy, e2Branching, e2Netcount, PipeMaterial, PipeThickness, PipeDiameter, ClogMaterial, ClogDensity, ClogThickness, ClogRatio FROM event ORDER BY event_id DESC LIMIT :limit OFFSET :offset");
     query.bindValue(":limit", pageSize);
     query.bindValue(":offset", page * pageSize);
 
@@ -473,7 +466,6 @@ QVector<std::shared_ptr<Event>> DatabaseManager::getEvents(int page, int pageSiz
         event->setMinGamma_nSv(query.value("minGamma_nSv").toDouble());
         event->setAvgFillCps(query.value("avgFillCps").toDouble());
         event->setDetectorId(query.value("detectorId").toLongLong());
-        event->setDetailId(query.value("detail_id").toLongLong());
         event->setBackgroundId(query.value("background_id").toLongLong());
         event->setCalibrationId(query.value("calibration_id").toLongLong());
         event->setAvgCps(query.value("avgCps").toDouble());
@@ -501,7 +493,7 @@ QVector<std::shared_ptr<Event>> DatabaseManager::getEvents(int page, int pageSiz
 std::shared_ptr<Event> DatabaseManager::getEventDetails(int id)
 {
     QSqlQuery query(m_database);
-    query.prepare("SELECT event_id, softwareVersion, dateBegin, dateFinish, liveTime, realTime, avgGamma_nSv, maxGamma_nSv, minGamma_nSv, avgFillCps, detectorId, detail_id, background_id, calibration_id, avgCps, maxCps, minCps, e1Energy, e1Branching, e1Netcount, e2Energy, e2Branching, e2Netcount, PipeMaterial, PipeThickness, PipeDiameter, ClogMaterial, ClogDensity, ClogThickness, ClogRatio FROM event WHERE event_id = :id");
+    query.prepare("SELECT event_id, softwareVersion, dateBegin, dateFinish, liveTime, realTime, avgGamma_nSv, maxGamma_nSv, minGamma_nSv, avgFillCps, detectorId, background_id, calibration_id, avgCps, maxCps, minCps, e1Energy, e1Branching, e1Netcount, e2Energy, e2Branching, e2Netcount, PipeMaterial, PipeThickness, PipeDiameter, ClogMaterial, ClogDensity, ClogThickness, ClogRatio FROM event WHERE event_id = :id");
     query.bindValue(":id", id);
 
     if (!executeQuery(query, "Fetching event details by ID")) {
@@ -522,7 +514,6 @@ std::shared_ptr<Event> DatabaseManager::getEventDetails(int id)
         event->setMinGamma_nSv(query.value("minGamma_nSv").toDouble());
         event->setAvgFillCps(query.value("avgFillCps").toDouble());
         event->setDetectorId(query.value("detectorId").toLongLong());
-        event->setDetailId(query.value("detail_id").toLongLong());
         event->setBackgroundId(query.value("background_id").toLongLong());
         event->setCalibrationId(query.value("calibration_id").toLongLong());
         event->setAvgCps(query.value("avgCps").toDouble());
@@ -627,13 +618,13 @@ int DatabaseManager::insertBackground(const Background* background)
 int DatabaseManager::insertCalibration(const Calibration* calibration)
 {
     QSqlQuery query(m_database);
-    query.prepare("INSERT INTO calibration (detector_id, coef_a, coef_b, coef_c, gc, ratio, chpeak_a, chpeak_b, chpeak_c, time, temperature) "
-                 "VALUES (:detector_id, :coef_a, :coef_b, :coef_c, :gc, :ratio, :chpeak_a, :chpeak_b, :chpeak_c, :time, :temperature)");
+    query.prepare("INSERT INTO calibration (detector_id, coef_a, coef_b, coef_c, gc, ratio, chpeak_a, chpeak_b, chpeak_c, time, temperature, spectrum) "
+                 "VALUES (:detector_id, :coef_a, :coef_b, :coef_c, :gc, :ratio, :chpeak_a, :chpeak_b, :chpeak_c, :time, :temperature, :spectrum)");
 
     query.bindValue(":detector_id", calibration->getDetectorId());
-    query.bindValue(":coef_a", static_cast<int>(calibration->coefficients()[0])); // Cast to INTEGER
-    query.bindValue(":coef_b", static_cast<int>(calibration->coefficients()[1]));
-    query.bindValue(":coef_c", static_cast<int>(calibration->coefficients()[2]));
+    query.bindValue(":coef_a", calibration->coefficients()[0]);
+    query.bindValue(":coef_b", calibration->coefficients()[1]);
+    query.bindValue(":coef_c", calibration->coefficients()[2]);
     query.bindValue(":gc", calibration->getGC());
     query.bindValue(":ratio", calibration->getRatio());
     query.bindValue(":chpeak_a", calibration->chCoefficients()[0]); // Assuming chCoefficients maps to chpeak_a,b,c
@@ -655,8 +646,8 @@ int DatabaseManager::insertCalibration(const Calibration* calibration)
 qlonglong DatabaseManager::insertEvent(const Event* event)
 {
     QSqlQuery query(m_database);
-    query.prepare("INSERT INTO event (softwareVersion, dateBegin, dateFinish, liveTime, realTime, avgGamma_nSv, maxGamma_nSv, minGamma_nSv, avgFillCps, detectorId, detail_id, background_id, calibration_id, avgCps, maxCps, minCps, e1Energy, e1Branching, e1Netcount, e2Energy, e2Branching, e2Netcount, PipeMaterial, PipeThickness, PipeDiameter, ClogMaterial, ClogDensity, ClogThickness, ClogRatio) "
-                 "VALUES (:softwareVersion, :dateBegin, :dateFinish, :liveTime, :realTime, :avgGamma_nSv, :maxGamma_nSv, :minGamma_nSv, :avgFillCps, :detectorId, :detail_id, :background_id, :calibration_id, :avgCps, :maxCps, :minCps, :e1Energy, :e1Branching, :e1Netcount, :e2Energy, :e2Branching, :e2Netcount, :PipeMaterial, :PipeThickness, :PipeDiameter, :ClogMaterial, :ClogDensity, :ClogThickness, :ClogRatio)");
+    query.prepare("INSERT INTO event (softwareVersion, dateBegin, dateFinish, liveTime, realTime, avgGamma_nSv, maxGamma_nSv, minGamma_nSv, avgFillCps, detectorId, background_id, calibration_id, avgCps, maxCps, minCps, e1Energy, e1Branching, e1Netcount, e2Energy, e2Branching, e2Netcount, PipeMaterial, PipeThickness, PipeDiameter, ClogMaterial, ClogDensity, ClogThickness, ClogRatio) "
+                 "VALUES (:softwareVersion, :dateBegin, :dateFinish, :liveTime, :realTime, :avgGamma_nSv, :maxGamma_nSv, :minGamma_nSv, :avgFillCps, :detectorId, :background_id, :calibration_id, :avgCps, :maxCps, :minCps, :e1Energy, :e1Branching, :e1Netcount, :e2Energy, :e2Branching, :e2Netcount, :PipeMaterial, :PipeThickness, :PipeDiameter, :ClogMaterial, :ClogDensity, :ClogThickness, :ClogRatio)");
 
     query.bindValue(":softwareVersion", event->getSoftwareVersion());
     query.bindValue(":dateBegin", event->getStartedTime());
@@ -668,7 +659,6 @@ qlonglong DatabaseManager::insertEvent(const Event* event)
     query.bindValue(":minGamma_nSv", event->getMinGamma_nSv());
     query.bindValue(":avgFillCps", event->getAvgFillCps());
     query.bindValue(":detectorId", static_cast<qlonglong>(event->getDetectorId()));
-    query.bindValue(":detail_id", static_cast<qlonglong>(event->getDetailId()));
     query.bindValue(":background_id", static_cast<qlonglong>(event->getBackgroundId()));
     query.bindValue(":calibration_id", static_cast<qlonglong>(event->getCalibrationId()));
     query.bindValue(":avgCps", event->getAvgCps());

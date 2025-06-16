@@ -1,5 +1,5 @@
-#ifndef NDT_UTIL_H
-#define NDT_UTIL_H
+#ifndef UTIL_H
+#define UTIL_H
 
 #include <QDebug>
 #include <QString>
@@ -244,4 +244,4 @@ inline int textWidth(QFontMetrics& metric, QString& text) {
 
 #define NC_UTIL_CLEAR_BGR(v) v->setAttribute(Qt::WA_NoSystemBackground)
 
-#endif // NDT_UTIL_H
+#endif // UTIL_H

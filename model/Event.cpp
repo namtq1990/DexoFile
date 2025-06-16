@@ -7,7 +7,6 @@ using namespace std;
 Event::Event()
     : mAcqTime(0),
     mId(0),
-    mDetailId(-1),
     mBackgroundId(-1),
     mCalibrationId(-1),
     mSpc(nullptr),

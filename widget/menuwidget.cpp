@@ -23,6 +23,10 @@ MenuWidget::MenuWidget(QWidget *parent) :
     connect(ui->btnCenter, &NcButton::longClicked, this, &MenuWidget::onCenterButtonLongClicked);
     connect(ui->btnRight, &NcButton::longClicked, this, &MenuWidget::onRightButtonLongClicked);
 
+    connect(ui->btnCenter, &NcButton::cancelled, this, [](auto) {
+        navigation::toShutdownDlg();
+    });
+
 
     // Connect to InputComponent signals
     nucare::InputComponent* inputComp = ComponentManager::instance().inputComponent();

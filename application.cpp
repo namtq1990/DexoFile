@@ -62,6 +62,7 @@ void Application::initialize()
     }
 
     ComponentManager::instance().initializeNavigationComponent();
+    ComponentManager::instance().platformController()->executeShellCommandAsync("/etc/init.d/S01splash stop");
 }
 
 } // namespace nucare

@@ -10,7 +10,14 @@ EventListAdapter::EventListAdapter(QObject *parent) : BaseModel<shared_ptr<Event
 int EventListAdapter::columnCount(const QModelIndex &) const { return 3; }
 
 QVariant EventListAdapter::data(const QModelIndex &index, int role) const {
-    if (role != Qt::DisplayRole) return QVariant();
+    if (role != Qt::DisplayRole) {
+        switch (role) {
+        case Qt::TextAlignmentRole:
+            return Qt::AlignCenter;
+        default:
+            return QVariant();
+        }
+    }
 
     auto event = rawData(index.row());
     if (event == nullptr) {
@@ -32,7 +39,7 @@ QVariant EventListAdapter::data(const QModelIndex &index, int role) const {
         case 2: {
             //        auto unit = mSettingDB->getDoseUnit();
             //        auto dose = nucare::from_nSvh(event->getDoses(), unit);
-            return "";
+            return QString("%1mm").arg(event->getClogThickness(), 0, 'f', 2);
             // return QString(nucare::autoformat_nSvh(event->getDoses()).c_str());
         }
         // case 3:
@@ -60,7 +67,7 @@ QVariant EventListAdapter::headerData(int section, Qt::Orientation orientation, 
             case 1:
                 return "Date";
             case 2:
-                return "AvgDose";
+                return "Clog Thickness";
                 // case 3:
                 //     return "Nuclide";
         }

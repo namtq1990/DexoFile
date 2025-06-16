@@ -210,14 +210,21 @@ void DetectorComponent::closeSerialPort()
 void DetectorComponent::sendCommand(const QByteArray &command)
 {
     if (m_serialPort->isOpen()) {
-        m_serialPort->write(command);
-        logD() << "Sent command:" << command;
+        nativeSend(command);
         m_currentCommand = command;
         m_readBuffer.clear(); // Clear buffer for new response
         m_responseTimer.start(1000); // Start timeout timer (1 second)
     } else {
         logE() << "Cannot send command, serial port not open.";
         emit errorOccurred("Cannot send command, serial port not open.");
+    }
+}
+
+void DetectorComponent::nativeSend(const QByteArray &command)
+{
+    if (m_serialPort->isOpen()) {
+        m_serialPort->write(command);
+        logD() << "Sent command:" << command;
     }
 }
 
@@ -547,16 +554,21 @@ void DetectorComponent::sendStartCommand()
 void DetectorComponent::sendUpdateCalib(const int ch32, const int ch662, const int chK40)
 {
     logD() << "Sending update calib: " << ch32 << ',' << ch662 << ',' << chK40;
+    UpdateCalibReq::Payload payload;
 
-    QByteArray buf(sizeof(UpdateCalibReq), 0);
-    auto payload = reinterpret_cast<UpdateCalibReq::Payload*>(buf.data());
-    payload->gain = htobe16(m_properties->getGC());
-    payload->temperature = htobe16(m_properties->getRawTemperature());
-    payload->ch32Kev = htobe16(ch32);
-    payload->ch662Kev = htobe16(ch662);
-    payload->chK40 = htobe16(chK40);
+//    auto payload = reinterpret_cast<UpdateCalibReq::Payload*>(buf.data());
+    payload.gain = htobe16(m_properties->getGC());
+    payload.temperature = htobe16(m_properties->getRawTemperature());
+    payload.ch32Kev = htobe16(ch32);
+    payload.ch662Kev = htobe16(ch662);
+    payload.chK40 = htobe16(chK40);
 
-    sendCommand(buf);
+    QByteArray buf(reinterpret_cast<char*>(&payload), sizeof(payload));
+    nativeSend(buf);
+}
+
+void DetectorComponent::sendPowerOff() {
+    nativeSend("PD");
 }
 
 } // namespace nucare

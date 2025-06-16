@@ -15,6 +15,7 @@
 #include "component/settingmanager.h"
 #include "model/DetectorProp.h"
 #include "ui_BgrScreen.h"
+#include "widget/AcqTimeDialog.h"
 
 #include <QDialog>
 
@@ -45,15 +46,16 @@ BackgroundScreen::BackgroundScreen(const QString &tag, QWidget *parent)
     m_counter(nullptr)
 {
     ui->setupUi(this);
-//    auto centerAct = new ViewAction {
-//        .name = translate("TIME"),
-//        .action = [this]() {
-//            getPresenter<BackgroundPresenter>()->toAcqDialog(getChildNavigation(), this);
-//            return true;
-//        },
-//        .icon = ":/images/common/menu_acq_time.png"
-//    };
-//    setCenterAction(centerAct);
+    auto centerAct = new ViewAction(
+        "TIME",
+        [this]() {
+            auto args = new AcqTimeArgs();
+            args->accumulator = m_counter;
+            navigation::toAcqTimeDlg(this, args);
+            return true;
+        },
+        ":/icons/menu_acq_time");
+    setCenterAction(centerAct);
 
     setupLayout();
 }

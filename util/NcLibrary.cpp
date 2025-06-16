@@ -224,8 +224,8 @@ void NcLibrary::Nomalization(Spectrum& spc, Spectrum* bgr, Spectrum::SPC_DATA& o
 //    }
 //}
 
-Coeffcients NcLibrary::computeCalib(const std::array<double, 3> &chPeaks,
-                                    const std::array<double, 3> &enPeaks)
+Coeffcients NcLibrary::computeCalib(const Coeffcients &chPeaks,
+                                    const Coeffcients &enPeaks)
 {
     auto size = chPeaks.size();
 
@@ -521,105 +521,6 @@ double NcLibrary::fwhm_eff(Spectrum *smoothSpc, int Peak_Channel, const Coeffcie
         return 0;
     }
 
-}
-
-void NcLibrary::smoothSpectrum(Spectrum &spc, int wdSize, const int repeat, double *out)
-{
-    try {
-        auto chIn = spc.data();
-        wdSize = (wdSize % 2 == 0) ? wdSize + 1 : wdSize; //Window Size가 홀수 짝수 인지 판별후 홀수로
-        int WindowHalfSize = (wdSize - 1)/2; //Window Size의 절반
-        int Smooth_Start = ((wdSize - 1)/2); //채널 데이터에서 스무딩이 시작되는 지점
-        int Soomth_End = spc.getSize() - ((wdSize - 1)/2); //채널 데이터에서 스무딩이 종료되는 지점
-
-//        double[] Smoothed_ChArray = new double[ChArray_Size];
-
-        for (int i = Smooth_Start; i < Soomth_End;i++) {
-            out[i] = 0;
-
-            for(int k = 0; k < wdSize; k++) {
-                auto index = i - wdSize + k;
-                if (index >= 0 && index < (int) spc.getSize()) {
-                    out[i] += (chIn[i - wdSize + k]);
-                }
-            }
-            out[i] = (out[i] / wdSize);
-        }
-
-        if(repeat > 1) {
-            double temp[spc.getSize()];
-            for(int j = 0; j < repeat - 1; j++) {//반복 횟수
-
-                for (int i = Smooth_Start; i < Soomth_End;i++) {
-                    temp[i] = 0;
-                    for(int k = 0; k < wdSize; k++) {
-                        temp[i] += (out[i - WindowHalfSize + k]);
-                    }
-                    temp[i] =(temp[i] / wdSize);
-                }
-
-                memcpy(out, temp, spc.getSize() * sizeof(double));
-            }
-        }
-    } catch(NcException& e) {
-        NcException ex(ErrorCode::UnknownError, "smoothSpectrum failed.", "", &e);
-        throw ex;
-    }
-
-}
-
-void NcLibrary::smoothSpectrum(Spectrum &spc, Spectrum& out, const std::pair<double, double>& smoothPar)
-{
-    auto outData = out.data();
-    double temp[spc.getSize()];
-
-    //HH200: NaI 2", CHSIZE:
-    double aval = smoothPar.first;
-    double bval = smoothPar.second;
-
-
-    // HH200: NaI 2", CHSIZE=2048
-    //	double aval = 0.0115820221 ;
-    //double bval = 5.6739379103;
-
-    // HH300: NaI 2
-    int NoSmooth = 2;
-    double temp_wind = round(aval * CHSIZE + bval);
-
-    double sum1 = 0;
-    int wnd = 0;
-    int wnd_half = 0;
-
-    out.setAcqTime(spc.getAcqTime());
-    out.setRealTime(spc.getRealTime());
-
-    memcpy(temp, spc.data(), spc.getSize() * sizeof(double));
-
-    for (int nosmoo = 1; nosmoo <= NoSmooth; nosmoo++) {
-        if (nosmoo > 1) {
-            memcpy(temp, outData, out.getSize() * sizeof(double));
-        }
-        for (int j = 3; j < CHSIZE - temp_wind; j++) {
-            sum1 = 0;
-
-            wnd = (int) floor(aval * (j + 1) + bval);
-
-            if (wnd < 0) {
-                outData[j] = temp[j];
-            }
-            if (wnd % 2 == 0) {
-                wnd = wnd + 1;
-            }
-            wnd_half = (int) floor(wnd / 2);
-
-            for (int k = j - wnd_half; k <= j + wnd_half; k++) {
-                if (k >= 0 && k < CHSIZE)
-                    sum1 = sum1 + temp[k];
-            }
-
-            outData[j] = sum1 / (double) wnd;
-        }
-    }
 }
 
 void convertSpectrum(const double *in, const int inSize, double *out, const int outSize, double(*ratioFor)(int))
@@ -1315,9 +1216,195 @@ void NcLibrary::ReBinning(double *ChSpec, const int &&chSize,
     }
 }
 
+void NcLibrary::ReBinning(const Spectrum &ChSpec, const BinSpectrum &transferSpc, BinSpectrum &binSpecOut)
+{
+    bool first = true;
+    Energy Z = 0, sum1 = 0, sum2 = 0, z_flt = 0, z_flt_pre = 0, ztmp = 0;
+    int ind_chn = 0;
+
+    int z_int = 0;
+    for (int i = 0; i < transferSpc.getSize(); i++) {
+        Z = transferSpc[i];
+
+        if (Z < 1) {
+            sum1 = sum1 + Z;
+            sum2 = 0;
+
+            if (sum1 > 1) {
+                ind_chn = ind_chn + 1;
+                sum2 = sum1 - 1;
+                binSpecOut[i] = (Z - sum2) * ChSpec[ind_chn - 1] + sum2 * ChSpec[ind_chn];
+                sum1 = sum2;
+            } else {
+                sum2 = Z;
+                binSpecOut[i] = sum2 * ChSpec[ind_chn];
+            }
+
+        } else if (Z > 1) {
+            if (first == true) {
+                first = false;
+                z_int = (int) floor(Z);
+                z_flt = Z - z_int;
+
+                if (ind_chn + z_int + 1 > CHSIZE - 1) {
+                    break;
+                }
+
+                sum1 = 0;
+                for (int j = 1; j <= z_int; j++) {
+                    sum1 = sum1 + ChSpec[ind_chn + j];
+                }
+
+                sum1 = sum1 + z_flt * ChSpec[ind_chn + z_int + 1];
+
+                ind_chn = ind_chn + z_int + 1;
+                z_flt_pre = 1 - z_flt;
+            }
+
+            else {
+                ztmp = Z - z_flt_pre;
+
+                z_int = (int) floor(ztmp);
+                sum1 = 0;
+
+                if (z_int >= 1) {
+                    z_flt = ztmp - z_int;
+
+                    if (ind_chn + z_int + 1 > CHSIZE - 1) {
+                        break;
+                    }
+
+                    sum1 = z_flt_pre * ChSpec[ind_chn];
+
+                    for (int j = 1; j <= z_int; j++) {
+                        sum1 = sum1 + ChSpec[ind_chn + j];
+                    }
+
+                    sum1 = sum1 + z_flt * ChSpec[ind_chn + z_int + 1];
+
+                    ind_chn = ind_chn + z_int + 1;
+                    z_flt_pre = 1 - z_flt;
+
+                } else {
+                    z_flt = Z - z_flt_pre;
+
+                    if (ind_chn + z_int + 1 > CHSIZE - 1) {
+                        break;
+                    }
+
+                    sum1 = z_flt_pre * ChSpec[ind_chn] + z_flt * ChSpec[ind_chn + 1];
+                    z_flt_pre = 1 - z_flt;
+                    ind_chn = ind_chn + 1;
+                }
+            }
+            binSpecOut[i] = sum1;
+        } else if (Z == 1) {
+            if (ind_chn < CHSIZE) {
+                binSpecOut[i] = ChSpec[ind_chn];
+                ind_chn = ind_chn + 1;
+            }
+
+        }
+    }
+}
+
 void NcLibrary::BintoCh(double* TF, double* BinOut) {
     bool First = true;
     double Z = 0, sum1 = 0, sum2 = 0, z_flt = 0, z_flt_pre = 0, ztmp = 0;
+    int ind_chn = 0;
+
+    int z_int = 0;
+    for (int i = 0; i < BINSIZE; i++) {
+        Z = TF[i];
+
+        if (Z < 1) {
+            sum1 = sum1 + Z;
+            sum2 = 0;
+
+            if (sum1 > 1) {
+                ind_chn = ind_chn + 1;
+                sum2 = sum1 - 1;
+                BinOut[i] = ind_chn;
+                sum1 = sum2;
+            } else {
+                sum2 = Z;
+                BinOut[i] = ind_chn;
+            }
+
+        } else if (Z > 1) {
+            if (First == true) {
+                First = false;
+                z_int = (int) floor(Z);
+                z_flt = Z - z_int;
+
+                if (ind_chn + z_int + 1 > CHSIZE - 1) {
+                    break;
+                }
+
+                sum1 = 0;
+                // for (int j = 1; j <= z_int; j++)
+                // {
+                // sum1 = sum1 + ChSpec[ind_chn + j];
+                // }
+
+                // sum1 = sum1 + z_flt * ChSpec[ind_chn + z_int + 1];
+
+                ind_chn = ind_chn + z_int + 1;
+                z_flt_pre = 1 - z_flt;
+            }
+
+            else {
+                ztmp = Z - z_flt_pre;
+
+                z_int = (int) floor(ztmp);
+                sum1 = 0;
+
+                if (z_int >= 1) {
+                    z_flt = ztmp - z_int;
+
+                    if (ind_chn + z_int + 1 > CHSIZE - 1) {
+                        break;
+                    }
+
+                    // sum1 = z_flt_pre * ChSpec[ind_chn];
+
+                    // for (int j = 1; j <= z_int; j++)
+                    // {
+                    // sum1 = sum1 + ChSpec[ind_chn + j];
+                    // }
+
+                    // sum1 = sum1 + z_flt * ChSpec[ind_chn + z_int + 1];
+
+                    ind_chn = ind_chn + z_int + 1;
+                    z_flt_pre = 1 - z_flt;
+
+                } else {
+                    z_flt = Z - z_flt_pre;
+
+                    if (ind_chn + z_int + 1 > CHSIZE - 1) {
+                        break;
+                    }
+
+                    // sum1 = z_flt_pre * ChSpec[ind_chn] + z_flt *
+                    // ChSpec[ind_chn + 1];
+                    z_flt_pre = 1 - z_flt;
+                    ind_chn = ind_chn + 1;
+                }
+            }
+            BinOut[i] = ind_chn;
+        } else if (Z == 1) {
+            if (ind_chn < CHSIZE) {
+                BinOut[i] = ind_chn;
+                ind_chn = ind_chn + 1;
+            }
+
+        }
+    }
+}
+
+void NcLibrary::BinToCh(const BinSpectrum &TF, BinSpectrum &BinOut) {
+    bool First = true;
+    Energy Z = 0, sum1 = 0, sum2 = 0, z_flt = 0, z_flt_pre = 0, ztmp = 0;
     int ind_chn = 0;
 
     int z_int = 0;

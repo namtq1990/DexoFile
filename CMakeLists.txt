@@ -37,6 +37,8 @@ set(PROJECT_SOURCES
         thememanager.h
         util/util.h
         util/util.cpp
+        util/ndt_util.h
+        util/ndt_util.cpp
         util/nc_exception.h
         util/nc_exception.cpp
         util/NcLibrary.h
@@ -53,6 +55,9 @@ set(PROJECT_SOURCES
         base/basedialog.h
         base/basedialog.cpp
         base/basedialog.ui
+        widget/AcqTimeDialog.h
+        widget/AcqTimeDialog.cpp
+        widget/AcqTimeDialog.ui
         widget/NcButton.h
         widget/NcButton.cpp
         widget/statusbarwidget.h
@@ -73,6 +78,8 @@ set(PROJECT_SOURCES
         widget/settingitemdelegate.cpp
         widget/SpectrumView.h
         widget/SpectrumView.cpp
+        widget/ShutdownDialog.h
+        widget/ShutdownDialog.cpp
         component/component.h
         component/component.cpp
         component/navigationcomponent.h
@@ -106,6 +113,9 @@ set(PROJECT_SOURCES
         model/Event.cpp
         model/Matrix.h
         model/Matrix.cpp
+        model/Material.h
+        model/ndt_model.h
+        model/ndt_model.cpp
         model/settingmodel.h
         model/settingmodel.cpp
         model/DetectorModels.h
@@ -128,8 +138,8 @@ set(PROJECT_SOURCES
         page/calibration/CalibrationScreen.ui
         page/calibration/CalibrationScreen.h
         page/calibration/CalibrationScreen.cpp
-        page/CalibAcqDialog.h
-        page/CalibAcqDialog.cpp
+        page/calibration/CalibAcqDialog.h
+        page/calibration/CalibAcqDialog.cpp
         page/events/EventListScreen.h
         page/events/EventListScreen.cpp
         page/events/EventListScreen.ui
@@ -139,6 +149,9 @@ set(PROJECT_SOURCES
         page/event_detail/EventDetailScreen.cpp
         page/event_detail/EventDetailScreen.ui
         page/event_detail/EventDetailArgs.h
+        page/swinfo/SwVersion.ui
+        page/swinfo/SwVersionDialog.h
+        page/swinfo/SwVersionDialog.cpp
         controller/wifi_service.h
         controller/wifi_service.cpp
         controller/platform_controller.h

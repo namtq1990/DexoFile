@@ -6,7 +6,7 @@
  */
 
 #include "CalibrationScreen.h"
-#include "page/CalibAcqDialog.h"
+#include "CalibAcqDialog.h"
 #include "config.h"
 #include "base/basedialog.h"
 #include "component/componentmanager.h"
@@ -55,18 +55,16 @@ CalibrationScreen::CalibrationScreen(const QString &tag, QWidget *parent)
     m_counter(nullptr)
 {
     ui->setupUi(this);
-    auto centerAct = new ViewAction (
-                "TIME", [this]() {
-        auto entry = navigation::toCalibCountDlg(this);
-        auto dlg = dynamic_cast<CalibAcqDialog*>(entry->view);
-        connect(dlg, &ChoicesDialog::accepted, this, [this, dlg]() {
-            auto acqCount = dlg->curChoice().toInt();
-            onAdjustCount(acqCount);
-        });
-//            getPresenter<CalibrationPresenter>()->toAcqDialog(getChildNavigation(), this);
+    auto centerAct = new ViewAction(
+        "TIME", [this]() {
+            auto entry = navigation::toCalibCountDlg(this);
+            auto dlg   = dynamic_cast<CalibAcqDialog*>(entry->view);
+            connect(dlg, &ChoicesDialog::accepted, this, [this, dlg]() {
+                auto acqCount = dlg->curChoice().toInt();
+                onAdjustCount(acqCount);
+            });
             return true;
-        }, ":/icons/menu_acq_time"
-    );
+        }, ":/icons/menu_acq_time");
     setCenterAction(centerAct);
 
     setupLayout();

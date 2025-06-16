@@ -12,5 +12,7 @@
         <file alias="menu_home">icons/menu_home.png</file>
         <file>icons/menu_info.png</file>
         <file alias="menu_up_ok">icons/menu_up_ok.png</file>
+        <file alias="menu_acq_left">icons/menu_acq_left.png</file>
+        <file alias="menu_acq_right">icons/menu_acq_right.png</file>
     </qresource>
 </RCC>

@@ -46,7 +46,7 @@ public:
 //                                     std::list<std::shared_ptr<IsotopeSummary>> &result,
 //                                     NcSP<repository::DetectorProperty> prop);
 
-    static Coeffcients computeCalib(const std::array<double, 3>& chPeaks, const std::array<double, 3>& enPeaks);
+    static Coeffcients computeCalib(const Coeffcients& chPeaks, const Coeffcients& enPeaks);
 
     /**
      * @brief calibConvert Convert calibration param to 3MeV
@@ -86,9 +86,60 @@ public:
      * @param smoothParam   Smooth paramter
      * @param out           Output result
      */
-    static void smoothSpectrum(Spectrum& spc, int wdSize, const int repeat, double* out);
+    template <class Spectrum_t>
+    static void smoothSpectrum(Spectrum_t& spc, Spectrum_t& out, const std::pair<double, double>& smoothPar)
+    {
+        auto chSize = out.getSize();
+        Spectrum_t temp;
 
-    static void smoothSpectrum(Spectrum& spc, Spectrum& out, const std::pair<double, double>& smoothPar);
+        //HH200: NaI 2", CHSIZE:
+        double aval = smoothPar.first;
+        double bval = smoothPar.second;
+
+
+        // HH200: NaI 2", CHSIZE=2048
+        //	double aval = 0.0115820221 ;
+        //double bval = 5.6739379103;
+
+        // HH300: NaI 2
+        int NoSmooth = 2;
+        double temp_wind = round(aval * chSize + bval);
+
+        double sum1 = 0;
+        int wnd = 0;
+        int wnd_half = 0;
+
+        out.setAcqTime(spc.getAcqTime());
+        out.setRealTime(spc.getRealTime());
+
+        std::copy(spc.begin(), spc.end(), temp.begin());
+
+        for (int nosmoo = 1; nosmoo <= NoSmooth; nosmoo++) {
+            if (nosmoo > 1) {
+                std::copy(out.begin(), out.end(), temp.begin());
+            }
+            for (int j = 3; j < chSize - temp_wind; j++) {
+                sum1 = 0;
+
+                wnd = (int) floor(aval * (j + 1) + bval);
+
+                if (wnd < 0) {
+                    out[j] = temp[j];
+                }
+                if (wnd % 2 == 0) {
+                    wnd = wnd + 1;
+                }
+                wnd_half = (int) floor(wnd / 2);
+
+                for (int k = j - wnd_half; k <= j + wnd_half; k++) {
+                    if (k >= 0 && k < chSize)
+                        sum1 = sum1 + temp[k];
+                }
+
+                out[j] = sum1 / wnd;
+            }
+        }
+    }
 
     static double channelToFWHM(const double channel, const FWHM& fwhm, const Coeffcients& coeff);
     static double energyToFWHM(const double energy, const FWHM& fwhm);
@@ -391,8 +442,10 @@ public:
     static void ReBinning(double* ChSpec, const int&& chSize,
                           double* transferSpc, const int&& tfSize,
                           double* binSpecOut);
+    static void ReBinning(const Spectrum& spc, const BinSpectrum& TF, BinSpectrum& out);
 
     static void BintoCh(double* TF, double* BinOut);
+    static void BinToCh(const BinSpectrum& TF, BinSpectrum& BinOut);
 
     /**
      * @brief Find_Vally

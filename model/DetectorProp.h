@@ -149,7 +149,7 @@ public:
     void setEnableGainStab(bool isEnable);
 
 
-    static const std::array<double, 8> InterCoeff;
+    static const InterCoeff interCoeff;
 //    = { -0.0000000001, 0.0000005531, -0.0008610261, 0.5684236932,
 //            -53.5185548731, 0.0002779219, -0.0100275772, 5.8129370431 };
     static constexpr double THRSHLD = 0.3;

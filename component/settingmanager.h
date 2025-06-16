@@ -2,6 +2,7 @@
 #define SETTINGMANAGER_H
 
 #include "component.h"
+#include "model/ndt_model.h"
 
 class SubSettingItem; // Forward declaration
 namespace nucare {
@@ -55,16 +56,15 @@ public:
     QVariant getSetting(const QString& key, const QVariant& defaultValue = QVariant()) const; // Add getSetting method
 
     static constexpr const char* KEY_INCREASE_TIME = "increaseTime";
- static constexpr const char* KEY_ACQTIME_BGR = "acqtime_background";
- static constexpr const char* KEY_ACQTIME_ID  = "acqtime_manualid";
- static constexpr const char* KEY_MEASURE_INVERVAL = "measure_interval";
- static constexpr const char* KEY_CALIB_COUNT = "calibration_totalcount";
- static constexpr const char* KEY_NDT_SRC = "ndt_source";
- static constexpr const char* KEY_PIPE_MATERIAL = "pipe_material";
- static constexpr const char* KEY_PIPE_DENSITY = "pipe_density";
- static constexpr const char* KEY_PIPE_THICKNESS = "pipe_thickness";
- static constexpr const char* KEY_PIPE_DIAMETER = "pipe_diameter";
-
+    static constexpr const char* KEY_ACQTIME_BGR = "acqtime_background";
+    static constexpr const char* KEY_ACQTIME_ID  = "acqtime_manualid";
+    static constexpr const char* KEY_MEASURE_INVERVAL = "measure_interval";
+    static constexpr const char* KEY_CALIB_COUNT = "calibration_totalcount";
+    static constexpr const char* KEY_NDT_SRC = "ndt_source";
+    static constexpr const char* KEY_PIPE_MATERIAL = "pipe_material";
+    static constexpr const char* KEY_PIPE_DENSITY = "pipe_density";
+    static constexpr const char* KEY_PIPE_THICKNESS = "pipe_thickness";
+    static constexpr const char* KEY_PIPE_DIAMETER = "pipe_diameter";
 
  SettingManager(QObject* parent = nullptr);
  virtual ~SettingManager();
@@ -78,11 +78,13 @@ public:
     int getAcqTimeId() const;
     int getMeasureInterval() const;
     int getCalibCount() const;
+    IsoProfile::Isotope getIsotope() const;
     QString getNdtSource() const;
     QString getPipeMaterial() const;
     double getPipeDensity() const;
     double getPipeThickness() const;
     double getPipeDiameter() const;
+    IsoProfile* getIsotopeProfile() const;
 
     template <typename Func>
     auto subscribeKey(const QString& key, QObject* context, Func&& receiverLambda) {
@@ -114,6 +116,7 @@ private:
     ConfigEntry* m_pipeDensity;
     ConfigEntry* m_pipeThickness;
     ConfigEntry* m_pipeDiameter;
+    IsoProfile* m_isotopeProfile = nullptr;
 
     void loadSettings();
 };

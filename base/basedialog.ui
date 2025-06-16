@@ -14,7 +14,7 @@
    <string>Dialog</string>
   </property>
   <property name="styleSheet">
-   <string notr="true">border: 1px solid black;</string>
+   <string notr="true"/>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
    <property name="spacing">
@@ -68,7 +68,7 @@ border-top-left-radius: 4px;</string>
       </sizepolicy>
      </property>
      <property name="styleSheet">
-      <string notr="true">QWidget {
+      <string notr="true">QWidget#contentWidget {
 border:  2px solid #606060;
 border-top-style: none;
 border-bottom-right-radius: 4px;

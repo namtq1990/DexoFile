@@ -50,7 +50,13 @@ public:
 //    static void IndexFillter_H_Apply(std::list<IsotopeSummary>& result2, repository::DetectorProperty* prop,
 //                               const double Confiden_Index1, const	double Confiden_Index2);
 
+    /**
+     * @brief TransferFunct @deprecated use template instead.
+     */
     static void TransferFunct(double* out, const int len, const FWHM& fwhm, const Coeffcients& coeff);
+
+    template <class Spectrum_t>
+    static void TransferFunct(Spectrum_t& out, const FWHM& fwhm, const Coeffcients& coeff);
 
     /**
      * @brief BGErosion
@@ -62,6 +68,8 @@ public:
      */
     static void BGErosion(double* MSBinSpec, const double* IterCoeff, double* bgBinOut, double* TF,
                                      const Coeffcients& coeff);
+    static void BGErosion(const BinSpectrum& MSBinSpec, const InterCoeff& IterCoeff, BinSpectrum& out,
+                          const BinSpectrum& TF, const Coeffcients& coeff);
 
     /**
      * @brief ReturnReBinning
@@ -70,8 +78,10 @@ public:
      * @param ChOut     Output array len CHSIZE
      */
     static void ReturnReBinning(double* BinSpec, double* TF, double* ChOut);
+    static void ReturnReBinning(const BinSpectrum& BinSpec, const BinSpectrum& TF, Spectrum& ChOut);
 
     static void BGSubtration(double* MSChSpec, double* ReBinChSpec, Spectrum* PPChSpecOut, const SmoothP& smooth );
+    static void BGSubtration(const Spectrum& MSChSpec, const Spectrum& ReBinChSpec, Spectrum* PPChSpecOut, const SmoothP& smooth);
 
     static void GenDSpecrum(Spectrum& PPChSpec, Spectrum& reBinChSpec, double* DChSpecOut, DetectorProperty* prop,
                                        bool isMeasurement);

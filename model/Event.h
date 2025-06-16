@@ -22,7 +22,6 @@ private:
     double mMaxGamma_nSv;
     double mMinGamma_nSv;
     double mAvgFillCps;
-    long mDetailId;
     long mBackgroundId;
     long mCalibrationId;
     double mAvgCps;
@@ -88,7 +87,6 @@ public:
     inline void setMinGamma_nSv(double value) { mMinGamma_nSv = value; }
     inline void setAvgFillCps(double value) { mAvgFillCps = value; }
     inline void setDetectorId(long id) { mDetectorId = id; }
-    inline void setDetailId(long id) { mDetailId = id; }
     inline void setAvgCps(double value) { mAvgCps = value; }
     inline void setMaxCps(double value) { mMaxCps = value; }
     inline void setMinCps(double value) { mMinCps = value; }
@@ -125,7 +123,6 @@ public:
     inline double getMaxGamma_nSv() const { return mMaxGamma_nSv; }
     inline double getMinGamma_nSv() const { return mMinGamma_nSv; }
     inline double getAvgFillCps() const { return mAvgFillCps; }
-    inline long getDetailId() const { return mDetailId; }
     inline double getAvgCps() const { return mAvgCps; }
     inline double getMaxCps() const { return mMaxCps; }
     inline double getMinCps() const { return mMinCps; }
